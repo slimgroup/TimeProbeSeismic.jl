@@ -1,6 +1,18 @@
 name = "TimeProbeSeismic"
 authors = ["Mathias Louboutin", "Felix J. Herrmann"]
-[compat]
-julia = "1.5.3"
+
 [deps]
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+JOLI = "bb331ad6-a1cf-11e9-23da-9bcb53c69f6f"
+JUDI = "f3b833dc-6b2e-5b9c-b940-873ed6319979"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+SegyIO = "157a0f19-4d44-4de5-a0d0-07e2f0ac4dfa"
+SlimOptim = "e4c7bc62-5b23-4522-a1b9-71c2be45f1df"
+
+[compat]
+julia = "1.5.3"
