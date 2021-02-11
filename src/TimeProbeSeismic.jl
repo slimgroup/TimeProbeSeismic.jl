@@ -7,6 +7,19 @@ using Reexport
 
 export h5read
 
+# python imports
+dv = pyimport("devito")
+pushfirst!(PyVector(pyimport("sys")."path"), joinpath(JUDIPATH, "pysource"))
+wu = pyimport("wave_utils")
+ker = pyimport("kernels")
+geom = pyimport("geom_utils")
+
+# Propagators
+include("propagators.jl")
+
+# JUDI functions
+include("judi.jl")
+
 h5read(filename, keys...) = read(h5open(filename, "r"), keys...)
 
 end
