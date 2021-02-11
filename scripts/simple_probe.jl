@@ -16,15 +16,16 @@ model0 = smooth(model; sigma=5)
 # Src/rec sampling and recording time
 timeD = 3000f0   # receiver recording time [ms]
 dtD = get_dt(model0)    # receiver sampling interval [ms]
+nsrc = 1
 
 nxrec = n[1]
 xrec = range(0f0, stop=(n[1] - 1)*d[1], length=nxrec)
 yrec = 0f0
 zrec = range(19*d[2], stop=19*d[2], length=nxrec)
 
-xsrc = convertToCell(range(0f0, (n[1] - 1)*d[1], length=nsrc))
-ysrc = convertToCell(range(0f0, 0f0, length=nsrc))
-zsrc = convertToCell(range(2*d[2], 2*d[2], length=nsrc))
+xsrc = (n[1] - 1)*d[1]/2
+ysrc = 0f0
+zsrc = 2*d[2]
 
 # Set up receiver structure
 recGeometry = Geometry(xrec, yrec, zrec; dt=dtD, t=timeD, nsrc=nsrc)
@@ -52,4 +53,5 @@ residual = d0 - dobs
 g = J'*residual
 
 # Probe
-dobs, eu, _ = forward(model0, q[1], recGeometry)
+dobs, Q, eu = forward(model0, q[1], dobs)
+ev = adjoint(model0, residual, Q)

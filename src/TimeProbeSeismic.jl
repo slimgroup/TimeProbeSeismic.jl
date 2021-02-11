@@ -2,10 +2,10 @@ module TimeProbeSeismic
 
 using Reexport
 
-@reexport using LinearAlgebra, SegyIO, JOLI, PyPlot, PyCall, HDF5, Images
-@reexport using SegyIO, JOLI, JUDI, SlimOptim
+using LinearAlgebra, SegyIO, JOLI, PyCall, HDF5, Images, Random
+@reexport using SegyIO, JOLI, JUDI, SlimOptim, PyPlot, JOLI
 
-export h5read
+export h5read, forward, adjoint, smooth
 
 # python imports
 dv = pyimport("devito")
@@ -16,10 +16,12 @@ geom = pyimport("geom_utils")
 
 # Propagators
 include("propagators.jl")
+include("interface.jl")
 
 # JUDI functions
 include("judi.jl")
 
-h5read(filename, keys...) = read(h5open(filename, "r"), keys...)
+# Utility functions
+include("utils.jl")
 
 end

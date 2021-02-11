@@ -1,17 +1,6 @@
-
-
-function forward(model::Model, q::judiVector, dobs::judiVector; options=Options())
-    return forward(devito_model(model, options), args...)
-end
-adjoint(model::Model, args...; options=Options()) = adjoint(devito_model(model, options), args...)
-
 # Forward propagation
 function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Float32},
-                 wavelet::Array{Float32}, e::Array{Float32}, space_order=8)
-    """
-    Low level propagator, to be used through `interface.py`
-    Compute forward wavefield u = A(m)^{-1}*f and related quantities (u(xrcv))
-    """
+                 wavelet::Array{Float32}, e::Array{Float32}, space_order::Integer=8)
     # Number of time steps
     nt = wavelet.shape[0]
 
@@ -37,12 +26,8 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 end
 
 
-function adjoint(model, y, src_coords, rcv_coords, space_order=8, e)
-    """
-    Low level propagator, to be used through `interface.py`
-    Compute adjoint wavefield v = adjoint(F(m))*y
-    and related quantities (||v||_w, v(xsrc))
-    """
+function adjoint(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32},
+                 e::Array{Float32}, space_order::Integer=8)
     # Number of time steps
     nt = y.shape[0]
 
