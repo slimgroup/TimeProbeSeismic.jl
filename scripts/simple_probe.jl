@@ -14,14 +14,14 @@ model0 = smooth(model; sigma=5)
 
 # Simple geometry
 # Src/rec sampling and recording time
-timeD = 3000f0   # receiver recording time [ms]
+timeD = 1000f0   # receiver recording time [ms]
 dtD = get_dt(model0)    # receiver sampling interval [ms]
 nsrc = 1
 
 nxrec = n[1]
 xrec = range(0f0, stop=(n[1] - 1)*d[1], length=nxrec)
 yrec = 0f0
-zrec = range(19*d[2], stop=19*d[2], length=nxrec)
+zrec = range(2*d[2], stop=2*d[2], length=nxrec)
 
 xsrc = (n[1] - 1)*d[1]/2
 ysrc = 0f0
@@ -52,6 +52,24 @@ residual = d0 - dobs
 # gradient
 g = J'*residual
 
+ge = Array{Any}(undef, 8)
 # Probe
-dobs, Q, eu = forward(model0, q[1], dobs)
-ev = adjoint(model0, residual, Q)
+for ps=1:8
+    d0, Q, eu = forward(model0, q, dobs; ps=2^ps)
+    ev = backprop(model0, residual, Q)
+    ge[ps] = combine_probes(ev, eu, model)
+end
+
+
+figure()
+subplot(331)
+imshow(g', cmap="seismic", vmin=-1e2, vmax=1e2, aspect=.5)
+title("true gradient")
+for ps=1:8
+    subplot(3,3,ps+1)
+    imshow(ge[ps]', cmap="seismic", vmin=-1e2, vmax=1e2, aspect=.5)
+    title("Probed ps=$(2^ps)")
+end
+tight_layout()
+
+plot([simil(g, ge[i]) for i=1:8])

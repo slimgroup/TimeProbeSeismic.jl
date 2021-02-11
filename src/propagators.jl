@@ -2,7 +2,7 @@
 function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Float32},
                  wavelet::Array{Float32}, e::Array{Float32}, space_order::Integer=8)
     # Number of time steps
-    nt = wavelet.shape[0]
+    nt = size(wavelet, 1)
 
     # Setting forward wavefield
     u = wu.wavefield(model, space_order)
@@ -17,7 +17,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(pde + geom_expr + probe_eq, subs=subs, name="forwardp")
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp")
 
     summary = op()
 
@@ -26,25 +26,25 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 end
 
 
-function adjoint(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32},
+function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32},
                  e::Array{Float32}, space_order::Integer=8)
     # Number of time steps
-    nt = y.shape[0]
+    nt = size(y, 1)
 
     # Setting adjoint wavefield
-    v = wu.wavefield(model, space_order, fw=False)
+    v = wu.wavefield(model, space_order, fw=false)
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, v, fw=False)
-    eu, probe_eq = time_probe(e, v)
+    pde = ker.wave_kernel(model, v, fw=false)
+    ev, probe_eq = time_probe(e, v; fw=false)
 
     # Setup source and receiver
-    geom_expr, _, rcv = geom.src_rec(model, v, src_coords=rcv_coords, nt=nt,
-                                     rec_coords=src_coords, wavelet=y, fw=False)
+    geom_expr, _, _ = geom.src_rec(model, v, src_coords=rcv_coords, nt=nt,
+                                     wavelet=y, fw=false)
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(pde + geom_expr + probe_eq, subs=subs, name="adjointp")
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="adjointp")
 
     # Run operator
     summary = op()
@@ -53,18 +53,16 @@ function adjoint(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32},
 end
 
 
-function time_probe(e::Array{Float32}, wf::PyObject)
+function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
-
     # Probing vector
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(wf.grid.time_dim, p_e),
-                        shape=(nt, size(e, 2)))
-    q.data[:, :] = e
-
+                        shape=(nt, size(e, 2)), time_order=0, initializer=e)
+    @show norm(q.data), norm(e)
     # Probed output
-    pe = dv.Function(name="pe", grid=wf.grid, dimensions=(grid.dimensions..., p_e),
+    pe = dv.Function(name="pe", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
                      shape=(wf.grid.shape..., size(e, 2)))
-    probing = dv.Inc(pe, q*wf)
+    probing = dv.Inc(pe, q*(fw ? wf.dt2 : wf))
     return pe, probing
 end
