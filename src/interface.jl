@@ -31,3 +31,16 @@ function backprop(model::Model, residual::judiVector, Q::Array{Float32}; options
     ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order)
     return ev
 end
+
+
+function setup_spg(model::Model, q::judiVector, dobs::judiVector)
+end
+
+function f(x)
+end
+
+function g!(x, g)
+end
+
+function fg!(x, g)
+end

@@ -9,7 +9,9 @@ bibliography:
 
 ## Abstract
 
-## Intrduction
+
+## Introduction
+
 
 ## Theory
 

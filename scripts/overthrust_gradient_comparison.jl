@@ -1,8 +1,13 @@
+# FWI on the 2D Overthrust model using spectral projected gradient descent
+# Author: mlouboutin3@gatech.edu
+# Date: February 2021
+#
+
 using DrWatson
 @quickactivate :TimeProbeSeismic
 
 # Load starting model
-!isfile(datadir("models", "overthrust_model.h5")) && download("ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5", datadir("models", "overthrust_model.h5"))
+~isfile(datadir("models", "overthrust_model.h5")) && download("ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5", datadir("models", "overthrust_model.h5"))
 n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
 
 n = Tuple(n)

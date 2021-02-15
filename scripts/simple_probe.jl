@@ -1,3 +1,8 @@
+# FWI on the 2D Overthrust model using spectral projected gradient descent
+# Author: mlouboutin3@gatech.edu
+# Date: February 2021
+#
+
 using DrWatson
 @quickactivate :TimeProbeSeismic
 
@@ -52,14 +57,13 @@ residual = d0 - dobs
 # gradient
 g = J'*residual
 
-ge = Array{Any}(undef, 8)
 # Probe
+ge = Array{Any}(undef, 8)
 for ps=1:8
     d0, Q, eu = forward(model0, q, dobs; ps=2^ps)
     ev = backprop(model0, residual, Q)
     ge[ps] = combine_probes(ev, eu, model)
 end
-
 
 figure()
 subplot(331)
