@@ -2,7 +2,6 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-
 using DrWatson
 @quickactivate :TimeProbeSeismic
 
@@ -11,26 +10,27 @@ n = (101, 101)
 d = (10., 10.)
 o = (0., 0.)
 
-m = 1.5f0^(-2) * ones(Float32, n)
-m[:, 5:end] .= .25f0
+m = 1.5f0^(-2) * ones(Float32, n);
+m[:, 51:end] .= .25f0;
+collect(m[i, i÷2+30:end] .= .35f0 for i=1:101);
 
-model = Model(n, d, o, m)
+model = Model(n, d, o, m; nb=80)
 model0 = smooth(model; sigma=5)
 
 # Simple geometry
 # Src/rec sampling and recording time
 timeD = 1000f0   # receiver recording time [ms]
 dtD = get_dt(model0)    # receiver sampling interval [ms]
-nsrc = 1
+nsrc = 3
 
 nxrec = n[1]
 xrec = range(0f0, stop=(n[1] - 1)*d[1], length=nxrec)
 yrec = 0f0
 zrec = range(2*d[2], stop=2*d[2], length=nxrec)
 
-xsrc = (n[1] - 1)*d[1]/2
-ysrc = 0f0
-zsrc = 2*d[2]
+xsrc = convertToCell(range(0f0, stop=(n[1] - 1)*d[1], length=nsrc))
+ysrc =  convertToCell(range(0f0, stop=0f0, length=nsrc))
+zsrc =  convertToCell(range(2*d[2], stop=2*d[2], length=nsrc))
 
 # Set up receiver structure
 recGeometry = Geometry(xrec, yrec, zrec; dt=dtD, t=timeD, nsrc=nsrc)
@@ -38,7 +38,7 @@ recGeometry = Geometry(xrec, yrec, zrec; dt=dtD, t=timeD, nsrc=nsrc)
 srcGeometry = Geometry(xsrc, ysrc, zsrc; dt=dtD, t=timeD)
 
 # setup wavelet
-f0 = 0.01f0     # kHz
+f0 = 0.015f0     # kHz
 wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
@@ -60,20 +60,32 @@ g = J'*residual
 # Probe
 ge = Array{Any}(undef, 8)
 for ps=1:8
-    d0, Q, eu = forward(model0, q, dobs; ps=2^ps)
-    ev = backprop(model0, residual, Q)
-    ge[ps] = combine_probes(ev, eu, model)
+    ge[ps] = judiJacobian(F0, q, 2^ps, dobs)'*residual
 end
+
+
+clip = maximum(g)/10
 
 figure()
 subplot(331)
-imshow(g', cmap="seismic", vmin=-1e2, vmax=1e2, aspect=.5)
-title("true gradient")
+imshow(g', cmap="seismic", vmin=-clip, vmax=clip, aspect=.5)
+title("Reference")
 for ps=1:8
     subplot(3,3,ps+1)
-    imshow(ge[ps]', cmap="seismic", vmin=-1e2, vmax=1e2, aspect=.5)
-    title("Probed ps=$(2^ps)")
+    imshow(ge[ps]', cmap="seismic", vmin=-clip, vmax=clip, aspect=.5)
+    title("ps=$(2^ps)")
 end
 tight_layout()
 
-plot([simil(g, ge[i]) for i=1:8])
+# Similarities
+similar = [simil(g, ge[i]) for i=1:8]
+# Similarities with muted wated
+mw(x::PhysicalParameter) = mw(x.data)
+mw(x::Array) = x[:, 33:end]
+similar2 = [simil(mw(g), mw(ge[i])) for i=1:8]
+
+figure()
+plot(similar, "--r", label="Full gradient")
+plot(similar2, "--b", label="Muted water layer")
+title(L"$\frac{<g, g_e>}{||g|| ||g_e||}$")
+legend()

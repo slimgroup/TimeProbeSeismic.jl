@@ -1,7 +1,10 @@
 name = "TimeProbeSeismic"
 authors = ["Mathias Louboutin", "Felix J. Herrmann"]
+uuid = "cd417b76-fc6b-4228-be91-94f5ea77264b"
+version = "0.0.1"
 
 [deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"

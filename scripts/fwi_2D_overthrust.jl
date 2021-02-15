@@ -38,6 +38,7 @@ q = judiVector(src_geometry, wavelet)
 fevals = 20
 batchsize = 20
 fvals = []
+ps = 2
 
 # Objective function for library
 function objective_function(x)
@@ -45,7 +46,7 @@ function objective_function(x)
 
     # select batch          "elapsed_time", elapsed_time
     idx = randperm(d_obs.nsrc)[1:batchsize]
-    f, g = fwi_objective(model0, q[idx], d_obs[idx])
+    f, g = fwi_objective(model0, q[idx], d_obs[idx], ps)
 
     global fvals; fvals = [fvals; f]
     return f, vec(g.data/norm(g, Inf))    # normalize gradient for line search

@@ -59,7 +59,6 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true)
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(wf.grid.time_dim, p_e),
                         shape=(nt, size(e, 2)), time_order=0, initializer=e)
-    @show norm(q.data), norm(e)
     # Probed output
     pe = dv.Function(name="pe", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
                      shape=(wf.grid.shape..., size(e, 2)))
