@@ -63,7 +63,7 @@ function time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::Uni
     # Process shots from source channel asynchronously
     results = pmap(j -> time_modeling(model, q[j], dat[j], ps, dobs[j], subsample(options, j)), p, srcnum)
     argout1 = results[1]
-    for j=2:numSources
+    for j=2:length(srcnum)
         argout1 += results[j]
     end
     return argout1

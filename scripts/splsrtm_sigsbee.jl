@@ -29,13 +29,13 @@ info = Info(prod(model0.n), d_lin.nsrc, ntComp)
 
 #################################################################################################
 
-opt = Options(isic=true, optimal_checkpointing=true)
+opt = Options(isic=true)
 
 # Setup operators
 Pr = judiProjection(info, d_lin.geometry)
 F0 = judiModeling(info, model0; options=opt)
 Ps = judiProjection(info, src_geometry)
-J = judiJacobian(Pr*F0*Ps', q)
+J = judiJacobian(Pr*F0*Ps', q, ps, d_lin)
 
 # Right-hand preconditioners (model topmute)
 idx_wb = find_water_bottom(reshape(dm, model0.n))

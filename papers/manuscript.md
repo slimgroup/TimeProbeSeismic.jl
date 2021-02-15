@@ -27,7 +27,7 @@ where ``\mathbf{u}, \mathbf{v}`` are the forward and adjoint wavefields solution
 |        |  ``\rho(\mathbf{u}(t))`` | ``\eta(\mathbf{v}(t))``|
 |:------:|:-------------------------:|:----------------------:|
 |Isotropic acoustic | ``\frac{d^2 \mathbf{u}(t)}{dt^2}`` | ``\mathbf{v}(t)`` |
-| Inverse scattering | | |
+| Inverse scattering | ``\mathbf{m} \frac{d^2 \mathbf{u}(t)}{dt^2} + \Delta \mathbf{u}(t)``| ``\mathbf{v}(t)`` |
 | TTI | ``\frac{d^2 (\mathbf{u}_p(t) + \mathbf{u}_s(t))}{dt^2}`` | ``\mathbf{v}_p(t) + \mathbf{v}_s(t)`` |
 : Imaging conditions
 

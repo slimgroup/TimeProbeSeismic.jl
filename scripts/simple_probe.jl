@@ -6,7 +6,7 @@ using DrWatson
 @quickactivate :TimeProbeSeismic
 
 # Setup a 2 layers model
-n = (101, 101)
+n = (151, 151)
 d = (10., 10.)
 o = (0., 0.)
 
@@ -16,6 +16,7 @@ collect(m[i, i÷2+30:end] .= .35f0 for i=1:101);
 
 model = Model(n, d, o, m; nb=80)
 model0 = smooth(model; sigma=5)
+dm = model0.m - model.m
 
 # Simple geometry
 # Src/rec sampling and recording time
@@ -43,7 +44,7 @@ wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
 # Forward operator
-opt = Options(space_order=16)
+opt = Options(space_order=16, sum_padding=true)
 F = judiModeling(model, srcGeometry, recGeometry; options=opt)
 F0 = judiModeling(model0, srcGeometry, recGeometry; options=opt)
 J = judiJacobian(F0, q)
@@ -53,6 +54,7 @@ J = judiJacobian(F0, q)
 dobs = F*q
 d0 = F0*q
 residual = d0 - dobs
+δd = J*dm
 
 # gradient
 g = J'*residual
@@ -77,15 +79,47 @@ for ps=1:8
 end
 tight_layout()
 
+
+clip = maximum(g)/10
+
+figure()
+subplot(331)
+imshow(g', cmap="seismic", vmin=-clip, vmax=clip, aspect=.5)
+title("Reference")
+for ps=1:8
+    subplot(3,3,ps+1)
+    imshow(g' - ge[ps]', cmap="seismic", vmin=-clip, vmax=clip, aspect=.5)
+    title("Difference ps=$(2^ps)")
+end
+tight_layout()
+
 # Similarities
 similar = [simil(g, ge[i]) for i=1:8]
 # Similarities with muted wated
 mw(x::PhysicalParameter) = mw(x.data)
-mw(x::Array) = x[:, 33:end]
+mw(x::Array) = x[:, 30:end]
 similar2 = [simil(mw(g), mw(ge[i])) for i=1:8]
 
 figure()
-plot(similar, "--r", label="Full gradient")
-plot(similar2, "--b", label="Muted water layer")
-title(L"$\frac{<g, g_e>}{||g|| ||g_e||}$")
+semilogx([2^i for i=1:8], similar, "-or", label="Full gradient", basex=2)
+semilogx([2^i for i=1:8], similar2, "-ob", label="Muted water layer", basex=2)
+title(L"Similarity $\frac{<g, g_e>}{||g|| ||g_e||}$")
+xlabel("Number of probing vectors")
 legend()
+
+
+# Adjoint test
+at = Array{Any}(undef, 8)
+J0 = dot(δd, residual)
+for ps=1:8
+    at[ps] = dot(ge[ps], dm)
+    @printf("ps=%d,  <J x, y> : %2.5e, <x, J' y> : %2.5e, relative error : %2.5e \n",
+            2^ps, J0, at[ps], (J0 - at[ps])/(J0 + at[ps]))
+end
+
+att = [abs(1 - J0/at[i]) for i=1:8]
+figure()
+semilogx([2^i for i=1:8], att, basex=2, label="Probed adjoint test")
+semilogx([2^i for i=1:8], [0 for i=1:8], label="target")
+title(L"$1 - \frac{<J \delta m, g_e>}{<J' \delta d, \delta m>}$")
+

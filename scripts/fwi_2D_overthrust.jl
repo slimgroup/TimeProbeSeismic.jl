@@ -38,6 +38,7 @@ q = judiVector(src_geometry, wavelet)
 fevals = 20
 batchsize = 20
 fvals = []
+ps = 2
 
 # Objective function for library
 function objective_function(x, ps)
@@ -48,7 +49,7 @@ function objective_function(x, ps)
     f, g = fwi_objective(model0, q[idx], d_obs[idx], ps)
     g[:, 1:19] .= 0f0
     global fvals; fvals = [fvals; f]
-    return f, vec(g.data/norm(g, Inf))    # normalize gradient for line search
+    return f, vec(g.data/norm(g, Inf))   # normalize gradient for line search
 end
 
 # Bound projection
