@@ -2,11 +2,13 @@ module TimeProbeSeismic
 
 using Reexport
 
-using LinearAlgebra, SegyIO, JOLI, PyCall, HDF5, Images, Random
+using PyCall
 using Distributed
-@reexport using SegyIO, JOLI, JUDI, SlimOptim, PyPlot, JOLI
+@reexport using LinearAlgebra, Images, HDF5, SegyIO, JOLI, JUDI
+@reexport using SlimOptim, PyPlot, JOLI, Printf, Random, Statistics
 
 export h5read, forward, backprop, smooth, combine_probes, simil
+export typedict
 
 # python imports
 const dv = PyNULL()

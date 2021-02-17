@@ -16,10 +16,9 @@ function time_resample_data(d::Array, dt_new, dt_old, t)
     if dt_new == dt_old
         return d
     else
-        numTraces = size(data, 2)
         timeAxis = 0:dt_old:t
         timeInterp = 0:dt_new:t
-        dataInterp = Float32.(SincInterpolation(data, timeAxis, timeInterp))
+        dataInterp = Float32.(SincInterpolation(d, timeAxis, timeInterp))
 
         return dataInterp
     end
@@ -60,10 +59,9 @@ end
 # Time modeling 
 function time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::UnitRange{Int64}, ps::Integer, dobs::judiVector, options)
     p = default_worker_pool()
-    numSources = length(srcnum)
 
     # Process shots from source channel asynchronously
-    results = pmap(j -> time_modeling(model, q[j], dat[j], ps, dobs[j], subsample(options, j)), p, 1:numSources)
+    results = pmap(j -> time_modeling(model, q[j], dat[j], ps, dobs[j], subsample(options, j)), p, srcnum)
     argout1 = results[1]
     for j=2:numSources
         argout1 += results[j]
@@ -83,9 +81,11 @@ time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::Int64, ps::I
 
 # FWI and lsrtm function
 function fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::Integer; options=Options())
+    
     # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
     p = default_worker_pool()
-    results = pmap(j -> fwi_objective_ps(model, q[j], dObs[j], ps; options=subsample(options, j)), p, 1:numSources)
+    results = pmap(j -> fwi_objective_ps(model, source[j], dObs[j], ps, subsample(options, j)), p, 1:dObs.nsrc)
+    
     # Collect and reduce gradients
     objective = 0f0
     gradient = PhysicalParameter(zeros(Float32, model.n), model.d, model.o)
@@ -93,13 +93,13 @@ function fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::I
     for j=1:dObs.nsrc
         gradient .+= results[j][2]
         objective += results[j][1]
-        results[j] = []
     end
     # first value corresponds to function value, the rest to the gradient
     return objective, gradient
 end
 
-function fwi_objective_ps(model::Model, source::judiVector, dObs::judiVector, ps::Integer; options=Options())
+
+function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
     d0, Q, eu = forward(model, q, dobs; ps=ps, options=options)
     residual = d0 - dobs
     ev = backprop(model, residual, Q; options=options)

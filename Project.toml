@@ -1,6 +1,6 @@
 name = "TimeProbeSeismic"
-authors = ["Mathias Louboutin", "Felix J. Herrmann"]
 uuid = "cd417b76-fc6b-4228-be91-94f5ea77264b"
+authors = ["Mathias Louboutin", "Felix J. Herrmann"]
 version = "0.0.1"
 
 [deps]
@@ -17,6 +17,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SegyIO = "157a0f19-4d44-4de5-a0d0-07e2f0ac4dfa"
 SlimOptim = "e4c7bc62-5b23-4522-a1b9-71c2be45f1df"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 julia = "1.5.3"

@@ -1,4 +1,6 @@
 
+typedict(x::T) where {T} = Dict(fn=>getfield(x, fn) for fn ∈ fieldnames(T))
+
 h5read(filename, keys...) = read(h5open(filename, "r"), keys...)
 
 function combine_probes(eu::Array{Float32, N}, ev::Array{Float32, N}, model; true_adjoint=false) where N

@@ -15,7 +15,7 @@ function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(
     Q = qr_data(d_data, ps; residual=r_data)
 
     rec, eu, _ = forward(modelPy, src_coords, rec_coords, q_data, Q, options.space_order)
-    rec = time_resample_data(rec, get_dt(model), dobs.geometry.dt[1],  dobs.geometry.t[1])
+    rec = time_resample_data(rec, dobs.geometry.dt[1], get_dt(model), dobs.geometry.t[1])
     return judiVector(dobs.geometry, rec), Q, eu
 end
 

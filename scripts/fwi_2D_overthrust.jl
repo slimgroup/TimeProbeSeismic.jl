@@ -38,16 +38,15 @@ q = judiVector(src_geometry, wavelet)
 fevals = 20
 batchsize = 20
 fvals = []
-ps = 2
 
 # Objective function for library
-function objective_function(x)
+function objective_function(x, ps)
     model0.m .= x;
 
     # select batch          "elapsed_time", elapsed_time
     idx = randperm(d_obs.nsrc)[1:batchsize]
     f, g = fwi_objective(model0, q[idx], d_obs[idx], ps)
-
+    g[:, 1:19] .= 0f0
     global fvals; fvals = [fvals; f]
     return f, vec(g.data/norm(g, Inf))    # normalize gradient for line search
 end
@@ -55,15 +54,14 @@ end
 # Bound projection
 ProjBound(x) = median([mmin x mmax], dims=2)[1:end]
 
-# FWI with SPG
-options = spg_options(verbose = 3, maxIter = fevals, memory = 3, iniStep = 1f0)
-x, fsave, funEvals = spg(objective_function, vec(m0), ProjBound, options)
+for i=1:8
+    ps = 2^i
+    objfun(x) = objective_function(x, ps)
+    # FWI with SPG
+    options = spg_options(verbose = 3, maxIter = fevals, memory = 3, iniStep = 1f0)
+    sol = spg(objfun, vec(m0), ProjBound, options)
 
-# Save results
-# wsave
-
-# Plot convergence and final result
-figure(); plot(fvals/norm(fvals, Inf));
-xlabel("Iteration no."); ylabel("Normalized residual"); title("Convergence of FWI w/ SPG")
-figure(); imshow(sqrt.(1f0 ./ adjoint(reshape(x, model0.n))), extent=(0, 20.0, 5.15, 0)); title("FWI with SPG");
-xlabel("Lateral position [km]"); ylabel("Depth [km]")
+    # Save results
+    # wsave
+    wsave(datadir("fwi_overthrust", "fwi_ps$(ps).bson"), typedict(sol))
+end
