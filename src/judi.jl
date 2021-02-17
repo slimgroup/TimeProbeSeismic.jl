@@ -112,7 +112,7 @@ end
 function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm, ps; options=Options(), nlind=false)
     # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
     p = default_worker_pool()
-    results = pmap(j -> lsrtm_objective_ps(model, q[j], dObs[j], dm, ps; options=subsample(options, j), nlind-nlind), p, 1:dObs.nsrc)
+    results = pmap(j -> lsrtm_objective_ps(model, q[j], dObs[j], dm, ps; options=subsample(options, j), nlind=nlind), p, 1:dObs.nsrc)
     # Collect and reduce gradients
     objective = 0f0
     gradient = PhysicalParameter(zeros(Float32, model.n), model.d, model.o)

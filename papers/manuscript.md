@@ -77,12 +77,14 @@ From this formulation, we can estimate the memory imprint of our methid compared
 
 ## Illustrative example
 
-Simple two layer model
+Simple two layer model and 2d overthrust single source
 - Show gradient
 - Show probed gradient
 - Show approx A (dobs * dobs') and true A (u v')
-- Show corresponding Q factor and qualitiy ratio ``A-QQ'A, A-Q_tQ_t'A``
+- Show  qualitiy ratio ``A-QQ'A``
 - Show similarity for increasing probing size ``\frac{<ge, g>}{||ge|| ||g||}``
+- Show adjoint test
+
 
 ## 2D FWI
 
@@ -90,11 +92,8 @@ Redo 2d overthrust
 
 ## 2D LSRTM
 
-Redo sigsbee and marmousi and/or BP
+2D SEAM with sparse OBN
 
-## 3D RTM
-
-3d overthrust
 
 ## Discussion
 

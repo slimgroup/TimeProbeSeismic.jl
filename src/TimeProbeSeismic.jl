@@ -23,7 +23,7 @@ function __init__()
     copy!(wu, pyimport("wave_utils"))
     copy!(ker,  pyimport("kernels"))
     copy!(geom, pyimport("geom_utils"))
-    copy!(si, pyimport("sensitivity.py"))
+    copy!(si, pyimport("sensitivity"))
 end
 
 # Propagators

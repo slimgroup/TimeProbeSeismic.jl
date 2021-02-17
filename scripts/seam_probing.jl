@@ -45,7 +45,6 @@ J = judiJacobian(F0, q)
 # Nonlinear modeling
 d0 = F0*q
 residual = d0 - dobs
-δd = J*dm
 
 # Probe
 ge = Array{Any}(undef, 6, 2)

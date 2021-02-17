@@ -462,7 +462,7 @@ version = "0.21.1"
 
 [[JUDI]]
 deps = ["ArgParse", "DSP", "Dierckx", "Distributed", "FFTW", "JOLI", "LinearAlgebra", "Pkg", "Printf", "PyCall", "Reexport", "SegyIO", "Test"]
-path = "/home/mlouboutin3/.julia/dev/JUDI"
+path = "/Users/mathiaslouboutin/.julia/dev/JUDI"
 uuid = "f3b833dc-6b2e-5b9c-b940-873ed6319979"
 version = "2.2.0"
 
@@ -723,7 +723,7 @@ version = "1.0.3"
 
 [[SegyIO]]
 deps = ["Distributed", "Printf", "Test"]
-path = "/home/mlouboutin3/.julia/dev/SegyIO"
+path = "/Users/mathiaslouboutin/.julia/dev/SegyIO"
 uuid = "157a0f19-4d44-4de5-a0d0-07e2f0ac4dfa"
 version = "0.7.3"
 
@@ -742,7 +742,7 @@ version = "0.9.3"
 
 [[SlimOptim]]
 deps = ["LineSearches", "LinearAlgebra", "Printf", "Test"]
-path = "/home/mlouboutin3/.julia/dev/SlimOptim"
+path = "/Users/mathiaslouboutin/.julia/dev/SlimOptim"
 uuid = "e4c7bc62-5b23-4522-a1b9-71c2be45f1df"
 version = "0.1.5"
 
