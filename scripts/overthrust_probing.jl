@@ -9,7 +9,7 @@ import TimeProbeSeismic: qr_data
 
 # Load starting model
 # Load starting model
-~isfile(datadir("models", "overthrust_model.h5")) && run(`wget ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 -P $(datadir("models", "overthrust_model.h5"))`)
+~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
 n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
 
 n = Tuple(n)
