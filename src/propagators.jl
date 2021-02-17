@@ -52,6 +52,36 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
     return ev.data, summary
 end
 
+# Forward propagation
+function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Float32},
+              wavelet::Array{Float32}, e::Array{Float32}, space_order::Integer=8, isic::Bool=false)
+    # Number of time steps
+    nt = size(wavelet, 1)
+
+    # Setting forward wavefield
+    u = wu.wavefield(model, space_order)
+    ul = wu.wavefield(model, space_order, name="l")
+
+    # Set up PDE expression and rearrange
+    pde = ker.wave_kernel(model, u)
+    pdel = ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic))
+    eu, probe_eq = time_probe(e, u, model; isic=isic)
+
+    # Setup source and receiver
+    geom_expr, _, rcv = geom.src_rec(model, u, src_coords=src_coords, nt=nt,
+                            rec_coords=rcv_coords, wavelet=wavelet)
+    geom_exprl, _, rcvl = geom.src_rec(model, ul, rec_coords=rcv_coords, nt=nt)
+
+    # Create operator and run
+    subs = model.spacing_map
+    op = dv.Operator(vcat(pde, pdel, geom_expr, geom_exprl, probe_eq), subs=subs, name="forwardp")
+
+    summary = op()
+
+    # Output
+    return rcv.data, rcvl.data, eu.data, summary
+end
+
 
 function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true, isic=false)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))

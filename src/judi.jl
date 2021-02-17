@@ -56,6 +56,7 @@ function JUDI.judiJacobian(F::judiPDEfull, source::judiVector, ps::Int64, dobs::
         )
 end
 
+
 # Time modeling 
 function time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::UnitRange{Int64}, ps::Integer, dobs::judiVector, options)
     p = default_worker_pool()
@@ -71,7 +72,7 @@ end
 
 
 function time_modeling(model::Model, q::judiVector, residual::judiVector, ps::Integer, dobs::judiVector, options)
-    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, residual=residual)
+    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options)
     ev = backprop(model, residual, Q; options=options)
     ge = combine_probes(ev, eu, model)
     return PhysicalParameter(ge, model.d, model.o)
@@ -102,6 +103,31 @@ end
 function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
     d0, Q, eu = forward(model, q, dobs; ps=ps, options=options)
     residual = d0 - dobs
+    ev = backprop(model, residual, Q; options=options)
+    ge = combine_probes(ev, eu, model)
+    return .5*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
+end
+
+# LSRTM
+function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm, ps; options=Options(), nlind=false)
+    # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
+    p = default_worker_pool()
+    results = pmap(j -> lsrtm_objective_ps(model, q[j], dObs[j], dm, ps; options=subsample(options, j), nlind-nlind), p, 1:dObs.nsrc)
+    # Collect and reduce gradients
+    objective = 0f0
+    gradient = PhysicalParameter(zeros(Float32, model.n), model.d, model.o)
+
+    for j=1:dObs.nsrc
+        gradient .+= results[j][2]
+        objective += results[j][1]
+    end
+    # first value corresponds to function value, the rest to the gradient
+    return objective, gradient
+end
+
+function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer; options=Options(), nlind=false)
+    dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options)
+    residual = nlind ? dl - (dobs - dnl) : dl - dobs
     ev = backprop(model, residual, Q; options=options)
     ge = combine_probes(ev, eu, model)
     return .5*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)

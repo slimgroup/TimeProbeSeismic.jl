@@ -4,7 +4,7 @@ using Reexport
 
 using PyCall
 using Distributed
-@reexport using LinearAlgebra, Images, HDF5, SegyIO, JOLI, JUDI
+@reexport using LinearAlgebra, Images, HDF5, SegyIO, JOLI, JUDI, JLD2
 @reexport using SlimOptim, PyPlot, JOLI, Printf, Random, Statistics
 
 export h5read, forward, backprop, smooth, combine_probes, simil
@@ -15,6 +15,7 @@ const dv = PyNULL()
 const wu = PyNULL()
 const ker = PyNULL()
 const geom = PyNULL()
+const si = PyNULL()
 
 function __init__()
     pushfirst!(PyVector(pyimport("sys")."path"), joinpath(JUDIPATH, "pysource"))
@@ -22,6 +23,7 @@ function __init__()
     copy!(wu, pyimport("wave_utils"))
     copy!(ker,  pyimport("kernels"))
     copy!(geom, pyimport("geom_utils"))
+    copy!(si, pyimport("sensitivity.py"))
 end
 
 # Propagators

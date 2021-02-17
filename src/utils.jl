@@ -8,11 +8,10 @@ function combine_probes(eu::Array{Float32, N}, ev::Array{Float32, N}, model; tru
     return remove_padding(g, get_pad(model); true_adjoint=true_adjoint)
 end
 
-function qr_data(d::Array{Float32,2}, ps::Integer; seed=nothing, residual=nothing)
-    r = isnothing(residual) ? d : residual
+function qr_data(d::Array{Float32,2}, ps::Integer; seed=nothing)
     !isnothing(seed) && Random.seed!(seed)
     S = rand([-1f0, 1f0], size(d, 1), ps)
-    AS = d * (r' * S)
+    AS = d * (d' * S)
     Q, _ = qr(AS)
     return Matrix(Q)
 end

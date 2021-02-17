@@ -6,7 +6,7 @@ using DrWatson
 @quickactivate :TimeProbeSeismic
 
 # Load starting model
-~isfile(datadir("models", "overthrust_model.h5")) && download("ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5", datadir("models", "overthrust_model.h5"))
+~isfile(datadir("models", "overthrust_model.h5")) && run(`wget ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 -P $(datadir("models", "overthrust_model.h5"))`)
 n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
 model0 = Model((n[1], n[2]), (d[1], d[2]), (o[1], o[2]), m0)
 
@@ -22,7 +22,7 @@ mmin = vec((1f0 ./ vmax).^2)
 mmax = vec((1f0 ./ vmin).^2)
 
 # Load data and create data vector
-~isfile(datadir("data", "overthrust_2D.segy")) && download("ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_2D.segy",datadir("data", "overthrust_2D.segy"))
+~isfile(datadir("data", "overthrust_2D.segy")) && run(`wget ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_2D.segy -P $(datadir("data", "overthrust_2D.segy"))`)
 
 block = segy_read(datadir("data", "overthrust_2D.segy"))
 d_obs = judiVector(block)

@@ -7,35 +7,37 @@ using DrWatson
 @quickactivate :TimeProbeSeismic
 
 # Load Sigsbee model
-# M = load("sigsbee2A_model.jld")
+~isfile(datadir("models", "seam_model.jld")) && run(`wget https://www.dropbox.com/s/9s8vnj087ttfhu6/seam_model.jld\?dl\=0 -P $(datadir("models", "seam_model.jld"))`)
+~isfile(datadir("data", "acou_data_nofs.jld"))&& run(`wget https://www.dropbox.com/s/zx1bjxeu5qgtr2l/acou_data_nofs.jld\?dl\=0 -P $(datadir("data", "acou_data_nofs.jld"))`)
+
+# Read model and set up background
+@load datadir("models", "seam_model.jld")
+vp = imresize(vp, (3501, 1501))
+rho = imresize(rho, (3501, 1501))
+m = vp.^(-2)
+m0 = Float32.(imfilter(m, Kernel.gaussian(15)))
+rho0 = Float32.(imfilter(rho[:, :], Kernel.gaussian(15)))
+dm = m0 - m
+
+n = size(m0)
+d = (12.5, 10.)
 
 # Setup info and model structure
-model0 = Model(M["n"], M["d"], M["o"], M["m0"])
-dm = vec(M["dm"])
+model0 = Model(n, d, o, m0, rho=rho0; nb=40)
 
 # Load data
-container = segy_scan(path_to_data, data_name, ["GroupX","GroupY","RecGroupElevation","SourceSurfaceElevation","dt"])
-d_lin = judiVector(container)
+@load datadir("data", "acou_data_nofs.jld")
 
-# Set up source
-src_geometry = Geometry(container; key="source")
-wavelet = ricker_wavelet(src_geometry.t[1], src_geometry.dt[1], 0.015)  # 15 Hz peak frequency
-q = judiVector(src_geometry, wavelet)
-
-# Set up info structure for linear operators
-ntComp = get_computational_nt(q.geometry,d_lin.geometry, model0)
-info = Info(prod(model0.n), d_lin.nsrc, ntComp)
-
+# Info structure for linear operators
+ntComp = get_computational_nt(q.geometry, dobs.geometry, model0)    # no. of computational time steps
+info = Info(prod(model0.n), dobs.nsrc, ntComp)
 
 #################################################################################################
 
 opt = Options(isic=true)
 
 # Setup operators
-Pr = judiProjection(info, d_lin.geometry)
-F0 = judiModeling(info, model0; options=opt)
-Ps = judiProjection(info, src_geometry)
-J = judiJacobian(Pr*F0*Ps', q, ps, d_lin)
+F0 = judiModeling(info, model0, q.geometry, dobs.geometry; options=opt)
 
 # Right-hand preconditioners (model topmute)
 idx_wb = find_water_bottom(reshape(dm, model0.n))
@@ -50,6 +52,7 @@ batchsize = 100
 niter = 20
 fval = zeros(Float32, niter)
 t = 2f-5
+ps = 32
 
 # Soft thresholding functions and Curvelet transform
 soft_thresholding(x::Array{Float64}, lambda) = sign.(x) .* max.(abs.(x) .- convert(Float64, lambda), 0.0)
@@ -64,8 +67,9 @@ for j=1:niter
     # Compute residual and gradient
     i = randperm(d_lin.nsrc)[1:batchsize]
     d_sub = get_data(d_lin[i])    # load shots into memory
-    r = J[i]*Mr*x - d_sub
-    g = Mr'*J[i]'*r
+    J = judiJacobian(F0[i], q[i], ps, d_sub)
+    r = j==1 ? -1*d_sub : J*Mr*x - d_sub
+    g = Mr'*J'*r
 
     # Step size and update variable
     fval[j] = .5*norm(r)^2

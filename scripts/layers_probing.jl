@@ -4,6 +4,7 @@
 #
 using DrWatson
 @quickactivate :TimeProbeSeismic
+import TimeProbeSeismic: qr_data
 
 # Setup a 2 layers model
 n = (151, 151)
@@ -123,3 +124,16 @@ semilogx([2^i for i=1:8], att, basex=2, label="Probed adjoint test")
 semilogx([2^i for i=1:8], [0 for i=1:8], label="target")
 title(L"$1 - \frac{<J \delta m, g_e>}{<J' \delta d, \delta m>}$")
 
+
+# Probing vectors
+figure();imshow(dobs.data[10]*dobs.data[10]', cmap="seismic", vmin=-10, vmax=10)
+title(L"$d_{obs} d_{obs}^\top$")
+
+figure()
+for ps=1:9
+    subplot(3,3,ps)
+    Q = qr_data(dobs.data[10]*dobs.data[10]', 2^ps)
+    imshow(Q, vmin=-.1, vmax=.1, cmap="seismic", aspect="auto")
+    title("Probing vectors ps=$(2^ps)")
+end
+tight_layout()
