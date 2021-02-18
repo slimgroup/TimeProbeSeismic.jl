@@ -1,7 +1,7 @@
 
-function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(), ps=16)
+function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(), ps=16, modelPy=nothing)
     # Python model
-    modelPy = devito_model(model, options)
+    isnothing(modelPy) && (modelPy = devito_model(model, options))
     # Interpolate input data to computational grid
     q_data = time_resample_data(q[1], get_dt(model))
     d_data = time_resample_data(dobs[1], get_dt(model))
@@ -18,9 +18,9 @@ function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(
     return judiVector(dobs.geometry, rec), Q, eu
 end
 
-function born(model::Model, q::judiVector, dobs::judiVector, dm; options=Options(), ps=16)
+function born(model::Model, q::judiVector, dobs::judiVector, dm; options=Options(), ps=16, modelPy=nothing)
     # Python model
-    modelPy = devito_model(model, options)
+    isnothing(modelPy) && (modelPy = devito_model(model, options))
     update_dm(modelPy, dm, options)
 
     # Interpolate input data to computational grid
@@ -40,9 +40,10 @@ function born(model::Model, q::judiVector, dobs::judiVector, dm; options=Options
     return judiVector(dobs.geometry, recnl), judiVector(dobs.geometry, recl), Q, eu
 end
 
-function backprop(model::Model, residual::judiVector, Q::Array{Float32}; options=Options(), ps=16)
-    # Python model
-    modelPy = devito_model(model, options)
+function backprop(model::Model, residual::judiVector, Q::Array{Float32}, eu::PyObject;
+                 options=Options(), ps=16, modelPy=nothing)
+    # Python mode
+    isnothing(modelPy) && (modelPy = devito_model(model, options))
     # Interpolate input data to computational grid
     d_data = time_resample_data(residual[1], get_dt(model))
 
@@ -50,5 +51,6 @@ function backprop(model::Model, residual::judiVector, Q::Array{Float32}; options
     rec_coords = setup_grid(residual.geometry[1], modelPy.shape)
 
     ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order)
-    return ev
+    g = combine(eu, ev, options.isic)
+    return remove_padding(g.data, modelPy.padsizes; true_adjoint=options.sum_padding)
 end

@@ -7,13 +7,13 @@ using DrWatson
 import TimeProbeSeismic: qr_data
 
 # Setup a 2 layers model
-n = (151, 151)
+n = (101, 101)
 d = (10., 10.)
 o = (0., 0.)
 
 m = 1.5f0^(-2) * ones(Float32, n);
 m[:, 51:end] .= .25f0;
-collect(m[i, i÷2+30:end] .= .35f0 for i=1:101);
+# collect(m[i, i÷2+30:end] .= .35f0 for i=1:101);
 
 model = Model(n, d, o, m; nb=80)
 model0 = smooth(model; sigma=5)
@@ -23,16 +23,20 @@ dm = model0.m - model.m
 # Src/rec sampling and recording time
 timeD = 1000f0   # receiver recording time [ms]
 dtD = get_dt(model0)    # receiver sampling interval [ms]
-nsrc = 3
+nsrc = 1
 
 nxrec = n[1]
 xrec = range(0f0, stop=(n[1] - 1)*d[1], length=nxrec)
 yrec = 0f0
 zrec = range(2*d[2], stop=2*d[2], length=nxrec)
 
-xsrc = convertToCell(range(0f0, stop=(n[1] - 1)*d[1], length=nsrc))
-ysrc =  convertToCell(range(0f0, stop=0f0, length=nsrc))
-zsrc =  convertToCell(range(2*d[2], stop=2*d[2], length=nsrc))
+# xsrc = convertToCell(range(0f0, stop=(n[1] - 1)*d[1], length=nsrc))
+# ysrc =  convertToCell(range(0f0, stop=0f0, length=nsrc))
+# zsrc =  convertToCell(range(2*d[2], stop=2*d[2], length=nsrc))
+
+xsrc = 750f0
+ysrc = 0f0
+zsrc = 2*d[2]
 
 # Set up receiver structure
 recGeometry = Geometry(xrec, yrec, zrec; dt=dtD, t=timeD, nsrc=nsrc)
@@ -45,7 +49,7 @@ wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
 # Forward operator
-opt = Options(space_order=16, sum_padding=true)
+opt = Options(space_order=16, sum_padding=true, isic=true)
 F = judiModeling(model, srcGeometry, recGeometry; options=opt)
 F0 = judiModeling(model0, srcGeometry, recGeometry; options=opt)
 J = judiJacobian(F0, q)
@@ -126,13 +130,13 @@ title(L"$1 - \frac{<J \delta m, g_e>}{<J' \delta d, \delta m>}$")
 
 
 # Probing vectors
-figure();imshow(dobs.data[10]*dobs.data[10]', cmap="seismic", vmin=-10, vmax=10)
+figure();imshow(dobs.data[1]*dobs.data[1]', cmap="seismic", vmin=-10, vmax=10)
 title(L"$d_{obs} d_{obs}^\top$")
 
 figure()
 for ps=1:9
     subplot(3,3,ps)
-    Q = qr_data(dobs.data[10]*dobs.data[10]', 2^ps)
+    Q = qr_data(dobs.data[1]*dobs.data[1]', 2^ps)
     imshow(Q, vmin=-.1, vmax=.1, cmap="seismic", aspect="auto")
     title("Probing vectors ps=$(2^ps)")
 end

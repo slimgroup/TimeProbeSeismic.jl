@@ -72,9 +72,9 @@ end
 
 
 function time_modeling(model::Model, q::judiVector, residual::judiVector, ps::Integer, dobs::judiVector, options)
-    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options)
-    ev = backprop(model, residual, Q; options=options)
-    ge = combine_probes(ev, eu, model)
+    modelPy = devito_model(model, options)
+    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, modelPy=modelPy)
+    ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
     return PhysicalParameter(ge, model.d, model.o)
 end
 
@@ -101,10 +101,10 @@ end
 
 
 function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
-    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options)
+    modelPy = devito_model(model, options)
+    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, modelPy=modelPy)
     residual = d0 - dobs
-    ev = backprop(model, residual, Q; options=options)
-    ge = combine_probes(ev, eu, model)
+    ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
     return .5*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end
 
@@ -126,9 +126,9 @@ function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm,
 end
 
 function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer; options=Options(), nlind=false)
-    dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options)
+    modelPy = devito_model(model, options)
+    dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
-    ev = backprop(model, residual, Q; options=options)
-    ge = combine_probes(ev, eu, model)
+    ev = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
     return .5*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end

@@ -17,12 +17,12 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp")
+    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="forwardp")
 
     summary = op()
 
     # Output
-    return rcv.data, eu.data, summary
+    return rcv.data, eu, summary
 end
 
 
@@ -44,12 +44,12 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="adjointp")
+    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="adjointp")
 
     # Run operator
     summary = op()
 
-    return ev.data, summary
+    return ev, summary
 end
 
 # Forward propagation
@@ -74,16 +74,16 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, pdel, geom_expr, geom_exprl, probe_eq), subs=subs, name="forwardp")
+    op = dv.Operator(vcat(pde, pdel, probe_eq, geom_expr, geom_exprl), subs=subs, name="forwardp")
 
     summary = op()
 
     # Output
-    return rcv.data, rcvl.data, eu.data, summary
+    return rcv.data, rcvl.data, eu, summary
 end
 
 
-function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true, isic=false)
+function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = fw ? wf.grid.time_dim.spacing : 1
     # Probing vector
@@ -91,14 +91,26 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true
     q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(wf.grid.time_dim, p_e),
                         shape=(nt, size(e, 2)), time_order=0, initializer=e)
     # Probed output
-    pe = dv.Function(name="pe", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
-                     shape=(wf.grid.shape..., size(e, 2)))
-    probing = dv.Inc(pe, s*q*ic(wf, fw, model, isic))
+    pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
+                     shape=(wf.grid.shape..., size(e, 2)), space_order=wf.space_order)
+
+    if size(e, 2) < 33
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, model, isic)).subs(p_e, i) for i=1:size(e, 2)]
+    else
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, model, isic))]
+    end
     return pe, probing
 end
 
 function ic(wf::PyObject, fw::Bool, model::PyObject, isic::Bool)
-    ~fw && (return wf)
-    ~isic && (return wf.dt2)
-    return wf.dt2 * model.m + wf.laplace
+    return (isic || ~fw) ? wf : wf.dt2
+end
+
+function combine(eu::PyObject, ev::PyObject, isic::Bool=false)
+    g = dv.Function(name="ge", grid=eu.grid, space_order=0)
+    eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
+    eq = eq.subs(ev.indices[end], eu.indices[end])
+    op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
+    op()
+    g
 end
