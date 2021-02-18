@@ -7,13 +7,12 @@ using DrWatson
 @quickactivate :TimeProbeSeismic
 
 # Load Sigsbee model
-~isfile(datadir("models", "seam_model.jld")) && run(`curl -L https://www.dropbox.com/s/9s8vnj087ttfhu6/seam_model.jld\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.jld"))`)
-~isfile(datadir("data", "acou_data_nofs.jld"))&& run(`curl -L https://www.dropbox.com/s/zx1bjxeu5qgtr2l/acou_data_nofs.jld\?dl\=0 --create-dirs -o $(datadir("data", "acou_data_nofs.jld"))`)
+~isfile(datadir("models", "seam_model.bin")) && run(`curl -L https://www.dropbox.com/s/nyazel8g6ah4cld/seam_model.bin\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.jld"))`)
+~isfile(datadir("data", "seam_obn_data.bin"))&& run(`curl -L https://www.dropbox.com/s/ap2y4ny5n98kd5c/seam_obn_data.bin\?dl\=0 --create-dirs -o $(datadir("data", "acou_data_nofs.jld"))`)
 
 # Read model and set up background
-@load datadir("models", "seam_model.jld") n d o vp rho
-vp = imresize(vp, (3501, 1501))
-rho = imresize(rho, (3501, 1501))
+vp, rho, n, d, o = deserialize(datadir("models", "bin.jld"))
+
 m = vp.^(-2)
 m0 = Float32.(imfilter(m, Kernel.gaussian(15)))
 rho0 = Float32.(imfilter(rho[:, :], Kernel.gaussian(15)))
@@ -26,16 +25,17 @@ d = (12.5, 10.)
 model0 = Model(n, d, o, m0, rho=rho0; nb=40)
 
 # Load data
-@load datadir("data", "acou_data_nofs.jld") dobs q
+dobs, q = deserialize(datadir("data", "seam_obn_data.bin"))
 dobs = dobs[[1, 22]]
 q = q[[1, 22]]
+
 # Info structure for linear operators
 ntComp = get_computational_nt(q.geometry, dobs.geometry, model0)    # no. of computational time steps
 info = Info(prod(model0.n), dobs.nsrc, ntComp)
 
 #################################################################################################
 # Write shots as segy files to disk
-opt = Options(space_order=16)
+opt = Options(space_order=16, isic=true)
 
 # Setup operators
 F0 = judiModeling(info, model0, q.geometry, dobs.geometry; options=opt)
@@ -54,7 +54,7 @@ for ps=1:6
 end
 
 for i=1:2
-    clip = maximum(g[i])/10
+    clip = maximum(ge[ps, i])/10
     figure()
     for ps=1:6
         subplot(2,3,ps)

@@ -4,7 +4,7 @@ using Reexport
 
 using PyCall
 using Distributed
-@reexport using LinearAlgebra, Images, HDF5, SegyIO, JOLI, JUDI, JLD2
+@reexport using LinearAlgebra, Images, HDF5, SegyIO, JOLI, JUDI, Serialization
 @reexport using SlimOptim, PyPlot, JOLI, Printf, Random, Statistics
 
 export h5read, forward, backprop, smooth, combine_probes, simil

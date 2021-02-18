@@ -34,7 +34,7 @@ zrec = range(2*d[2], stop=2*d[2], length=nxrec)
 # ysrc =  convertToCell(range(0f0, stop=0f0, length=nsrc))
 # zsrc =  convertToCell(range(2*d[2], stop=2*d[2], length=nsrc))
 
-xsrc = 750f0
+xsrc = 500f0
 ysrc = 0f0
 zsrc = 2*d[2]
 
@@ -44,7 +44,7 @@ recGeometry = Geometry(xrec, yrec, zrec; dt=dtD, t=timeD, nsrc=nsrc)
 srcGeometry = Geometry(xsrc, ysrc, zsrc; dt=dtD, t=timeD)
 
 # setup wavelet
-f0 = 0.015f0     # kHz
+f0 = 0.01f0     # kHz
 wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
