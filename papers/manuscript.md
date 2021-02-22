@@ -21,14 +21,14 @@ In this section, we describe how seismic imaging conditions can be reformulated 
 \mathcal{I} = \sum_t \rho(\mathbf{u}(t)) \eta(\mathbf{v}(t))
 ```
 
-where ``\mathbf{u}, \mathbf{v}`` are the forward and adjoint wavefields solutions of the forward and adjoitn wave equations, and ``\rho, \eta`` are differential operators implementing the imaging conditions. We provide a few examples of thes differential operators in Table #ictable for illustration.
+where ``\mathbf{u}, \mathbf{v}`` are the forward and adjoint wavefields solutions of the forward and adjoitn wave equations, and ``\rho, \eta`` are differential operators implementing the imaging conditions. In some case, this imaging condition can nclude multiple terms such as with the inverse scattering imaging codition (ISIC)[@ref]. We provide a few examples of these differential operators in Table #ictable for illustration with the corresponding imaging condition.
 
 ### Table: : {#ictable}
-|        |  ``\rho(\mathbf{u}(t))`` | ``\eta(\mathbf{v}(t))``|
-|:------:|:-------------------------:|:----------------------:|
-|Isotropic acoustic | ``\frac{d^2 \mathbf{u}(t)}{dt^2}`` | ``\mathbf{v}(t)`` |
-| Inverse scattering | ``\mathbf{m} \frac{d^2 \mathbf{u}(t)}{dt^2} + \Delta \mathbf{u}(t)``| ``\mathbf{v}(t)`` |
-| TTI | ``\frac{d^2 (\mathbf{u}_p(t) + \mathbf{u}_s(t))}{dt^2}`` | ``\mathbf{v}_p(t) + \mathbf{v}_s(t)`` |
+|        |  ``\rho(\mathbf{u}(t))`` | ``\eta(\mathbf{v}(t))``| Imaging condition |
+|:------:|:-------------------------:|:----------------------:|:----------------------:|
+|Isotropic acoustic | ``\frac{d^2 \mathbf{u}(t)}{dt^2}`` | ``\mathbf{v}(t)`` | ``\sum_t \frac{d^2 \mathbf{u}(t)}{dt^2} \mathbf{v}(t)``|
+| Inverse scattering | ``\mathbf{\rho} \Delta \mathbf{u}(t) , \nabla \mathbf{u}(t)``| ``\mathbf{v}(t), \nabla \mathbf{v}(t)`` | ``\sum_t \mathbf{\rho} \Delta \mathbf{u}(t) \mathbf{v}(t) +  \nabla \mathbf{u}(t) . \nabla \mathbf{v}(t)`` |
+| TTI | ``\frac{d^2 (\mathbf{u}_p(t) + \mathbf{u}_s(t))}{dt^2}`` | ``\mathbf{v}_p(t) + \mathbf{v}_s(t)`` | ``\sum_t \frac{d^2 (\mathbf{u}_p(t) + \mathbf{u}_s(t))}{dt^2} (\mathbf{v}_p(t) + \mathbf{v}_s(t))``|
 : Imaging conditions
 
 
@@ -71,6 +71,21 @@ Through these three steps we can see that we now obtain an unbiased [refs] estim
 | ``\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(u_z v_z)``
 : Seismic inversion via probed trace estimation
 
+### Inverse scattering
+
+For the inverse scattering imaging condition, following the previous step to the letter would require double the memory storage, since we need to probe each term spearately (laplacian and gradient terms in table #ictable\). However, since we formulate this imaging condition with linear differential operators acting along space only, we can rewrite the probign so that we only need to probe the forward and adjoitn wavefield. The linearity of the differential operator guaranties that ``\sum_t \mathbf{z}_i(t) \rho(\mathbf{u}(t)) = \rho(\sum_t \mathbf{z}_i(t) \mathbf{u}(t))``. Therefore, we can probe ``\mathbf{u}`` then apply the imaging condition to the time probed ``u_z(\mathbf{x})``. This algorithm summarizes as:
+
+### Algorithm: {#pic-isic}
+| **for t=1:nt**
+| 1. ``\mathbf{u}(t+1) = ts(\mathbf{u}(t), \mathbf{u}(t-1), \mathbf{m})``
+| 2. ``u_z(\mathbf{x}) += \mathbf{Z}^\top \mathbf{u}(t, \mathbf{x})``
+| **for t=nt:1**
+| 1. ``\mathbf{v}(t-1) = ts(\mathbf{v}(t), \mathbf{v}(t+1), \mathbf{m})``
+| 2. ``v_z(\mathbf{x}) += \mathbf{v}(t, \mathbf{x})^\top \mathbf{Z}``
+| ``\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(\rho(u_z) \rho(v_z))``
+: Seismic inversion via probed trace estimation
+
+
 ### Memory estimates
 
 From this formulation, we can estimate the memory imprint of our methid compared to conventional seismic inversion and memory efficient methods for the isotropic acoustic case. This memory overview generalize to other wave equation and imaging condition easily as the memory reuqirements only differ by a constant scalar, related to the number of coupled PDEs, for different physics. We consider a three d imensional domain with ``N_x N_y N_z`` grid points and ``n_t`` time steps. Standard adjoint state requires to save the forward wavefield in its entirety to compute the gradient which leads to a memory requirement of ``4 N n_t`` bytes of memory in single precision. This is the maximum memory necessary. Our method on the other hand, for ``p_s`` probing vector (i.e ``\mathbf{Z} \in \mathbb{R}^{n_t x p_s}``), requires ``4 N p_s`` bytes in the forward pass and ``4 N p_s`` in the backward pass for a total of ``8 N p_s`` byte which leads to a memroy reduction factor of ``\frac{n_t}{2}``. This memory reduction is similar to computing the gradient with ``p_s`` fourier modes, i.e on-the-fly Fourier [refs].
@@ -89,6 +104,15 @@ Simple two layer model and 2d overthrust single source
 ## 2D FWI
 
 Redo 2d overthrust
+
+#### Figure: {#2d-fwi}
+![](./figures/fwi_overthrust.png)
+: FWI on the 2D overthrust model with varying number of probing vectors.
+
+#### Figure: {#2d-fwi-conv}
+![](./figures/fwi_overthrust_conv.png)
+: Convergence of the inversion for varying number of probing vectors.
+
 
 ## 2D LSRTM
 

@@ -7,9 +7,8 @@ using DrWatson
 @quickactivate :TimeProbeSeismic
 
 # Load Sigsbee model
-~isfile(datadir("models", "seam_model.bin")) && run(`curl -L https://www.dropbox.com/s/nyazel8g6ah4cld/seam_model.bin\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.jld"))`)
-~isfile(datadir("data", "seam_obn_data.bin"))&& run(`curl -L https://www.dropbox.com/s/ap2y4ny5n98kd5c/seam_obn_data.bin\?dl\=0 --create-dirs -o $(datadir("data", "acou_data_nofs.jld"))`)
-
+~isfile(datadir("models", "seam_model.bin")) && run(`curl -L https://www.dropbox.com/s/nyazel8g6ah4cld/seam_model.bin\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.bin"))`)
+~isfile(datadir("data", "seam_obn_data.bin"))&& run(`curl -L https://www.dropbox.com/s/ap2y4ny5n98kd5c/seam_obn_data.bin\?dl\=0 --create-dirs -o $(datadir("data", "seam_obn_data.bin"))`)
 # Read model and set up background
 vp, rho, n, d, o = deserialize(datadir("models", "bin.jld"))
 
