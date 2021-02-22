@@ -31,6 +31,7 @@ d_obs = judiVector(block)
 src_geometry = Geometry(block; key = "source", segy_depth_key = "SourceDepth")
 wavelet = ricker_wavelet(src_geometry.t[1], src_geometry.dt[1], 0.008f0) # 8 Hz wavelet
 q = judiVector(src_geometry, wavelet)
+q_dist = generate_distribution(q)
 
 ########################################### FWI ####################################################
 
@@ -39,30 +40,67 @@ fevals = 20
 batchsize = 20
 fvals = []
 ps = 2
+g_const = 0
+frequencies = Array{Any}(undef, batchsize)
 
 # Objective function for library
-function objective_function(x, ps)
+function objective_function(x, ps; dft=false)
+    Base.flush(stdout)
     model0.m .= x;
 
-    # select batch          "elapsed_time", elapsed_time
+    # select batch          
     idx = randperm(d_obs.nsrc)[1:batchsize]
-    f, g = fwi_objective(model0, q[idx], d_obs[idx], ps)
+    # dft mode
+    if dft
+        for k=1:batchsize
+            frequencies[k] = select_frequencies(q_dist; fmin=0.003, fmax=0.02, nf=ps)
+        end
+        opt = Options(frequencies=frequencies)
+        f, g = JUDI.fwi_objective(model0, q[idx], d_obs[idx]; options=opt)
+    elseif isnothing(ps)
+        f, g = JUDI.fwi_objective(model0, q[idx], d_obs[idx])
+    else
+        f, g = fwi_objective(model0, q[idx], d_obs[idx], ps)
+    end
     g[:, 1:19] .= 0f0
-    global fvals; fvals = [fvals; f]
-    return f, vec(g.data/norm(g, Inf))   # normalize gradient for line search
+    g_const == 0 && global g_const = 1 / norm(g, Inf)
+    return f, vec(g.data.*g_const)   # normalize gradient for line search
 end
 
 # Bound projection
 ProjBound(x) = median([mmin x mmax], dims=2)[1:end]
 
+
+objfun(x) = objective_function(x, nothing)
+# FWI with SPG
+options = spg_options(verbose = 3, maxIter = fevals, memory = 3, iniStep = 1f0)
+g_const = 0
+sol = spg(objfun, vec(m0), ProjBound, options)
+
+# Save results
+# wsave
+wsave(datadir("fwi_overthrust", "fwi_std.bson"), typedict(sol))
+
+skip = 1:7
+
 for i=1:8
     ps = 2^i
-    objfun(x) = objective_function(x, ps)
+    if i not in skip
+        objfun(x) = objective_function(x, ps)
+        # FWI with SPG
+        g_const = 0
+        sol = spg(objfun, vec(m0), ProjBound, options)
+
+        # Save results
+        # wsave
+        wsave(datadir("fwi_overthrust", "fwi_ps$(ps).bson"), typedict(sol))
+    end
+    objfun(x) = objective_function(x, ps; dft=true)
     # FWI with SPG
-    options = spg_options(verbose = 3, maxIter = fevals, memory = 3, iniStep = 1f0)
+    g_const = 0
     sol = spg(objfun, vec(m0), ProjBound, options)
 
     # Save results
     # wsave
-    wsave(datadir("fwi_overthrust", "fwi_ps$(ps).bson"), typedict(sol))
+    wsave(datadir("fwi_overthrust", "fwi_dft$(ps).bson"), typedict(sol))
 end
