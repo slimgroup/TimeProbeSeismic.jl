@@ -39,7 +39,6 @@ q_dist = generate_distribution(q)
 fevals = 20
 batchsize = 20
 fvals = []
-ps = 2
 g_const = 0
 frequencies = Array{Any}(undef, batchsize)
 
@@ -71,34 +70,31 @@ end
 ProjBound(x) = median([mmin x mmax], dims=2)[1:end]
 
 
-objfun(x) = objective_function(x, nothing)
 # FWI with SPG
 options = spg_options(verbose = 3, maxIter = fevals, memory = 3, iniStep = 1f0)
 g_const = 0
-sol = spg(objfun, vec(m0), ProjBound, options)
+#sol = spg(x->objective_function(x, nothing), vec(m0), ProjBound, options)
 
 # Save results
 # wsave
-wsave(datadir("fwi_overthrust", "fwi_std.bson"), typedict(sol))
+#wsave(datadir("fwi_overthrust", "fwi_std.bson"), typedict(sol))
 
 skip = 1:7
 
 for i=1:8
     ps = 2^i
-    if i not in skip
-        objfun(x) = objective_function(x, ps)
+    if i ∉ skip
         # FWI with SPG
-        g_const = 0
-        sol = spg(objfun, vec(m0), ProjBound, options)
+        global g_const = 0
+        sol = spg(x->objective_function(x, ps), vec(m0), ProjBound, options)
 
         # Save results
         # wsave
         wsave(datadir("fwi_overthrust", "fwi_ps$(ps).bson"), typedict(sol))
     end
-    objfun(x) = objective_function(x, ps; dft=true)
     # FWI with SPG
-    g_const = 0
-    sol = spg(objfun, vec(m0), ProjBound, options)
+    global g_const = 0
+    sol = spg(x->objective_function(x, ps; dft=true), vec(m0), ProjBound, options)
 
     # Save results
     # wsave
