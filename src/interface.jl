@@ -11,7 +11,8 @@ function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(
     rec_coords = setup_grid(dobs.geometry[1], modelPy.shape)
 
     # QR probing vector
-    Q = qr_data(d_data, ps)
+    ts = trunc(Int, abs(src_coords[1, end] - rec_coords[1, end])/(1.5f0*get_dt(model)))
+    Q = qr_data(d_data, ps; ts=ts)
 
     rec, eu, _ = forward(modelPy, src_coords, rec_coords, q_data, Q, options.space_order, options.isic)
     rec = time_resample_data(rec, dobs.geometry.dt[1], get_dt(model), dobs.geometry.t[1])
@@ -32,7 +33,8 @@ function born(model::Model, q::judiVector, dobs::judiVector, dm; options=Options
     rec_coords = setup_grid(dobs.geometry[1], modelPy.shape)
 
     # QR probing vector
-    Q = qr_data(d_data, ps)
+    ts = trunc(Int, abs(src_coords[1, end] - rec_coords[1, end])/(1.5f0*get_dt(model)))
+    Q = qr_data(d_data, ps; ts=ts)
 
     recnl, recl, eu, _ = born(modelPy, src_coords, rec_coords, q_data, Q, options.space_order, options.isic)
     recnl = time_resample_data(recnl, dobs.geometry.dt[1], get_dt(model), dobs.geometry.t[1])

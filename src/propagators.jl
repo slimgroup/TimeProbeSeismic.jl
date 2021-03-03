@@ -94,8 +94,8 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true
     pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
                      shape=(wf.grid.shape..., size(e, 2)), space_order=wf.space_order)
 
-    if size(e, 2) < 33
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, model, isic)).subs(p_e, i) for i=1:size(e, 2)]
+    if size(e, 2) < 17
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, model, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
     else
         probing = [dv.Inc(pe, s*q*ic(wf, fw, model, isic))]
     end
