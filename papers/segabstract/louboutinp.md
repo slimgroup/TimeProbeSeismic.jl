@@ -73,12 +73,12 @@ Through these three steps, we obtain the unbiased [@hutchpp] estimate of the tru
 | 1. ``\mathbf{u}(t+1) = f(\mathbf{u}(t), \mathbf{u}(t-1), \mathbf{m}, \mathbf{q})``
 | 2. ``u_z(\mathbf{x}) += \mathbf{Z}^\top \mathbf{u}(t, \mathbf{x})``
 | **for t=nt:1**
-| 1. ``\mathbf{v}(t-1) = f^\top(\mathbf{v}(t), \mathbf{v}(t+1), \mathbf{m}, δ \mathbf{d})``
+| 1. ``\mathbf{v}(t-1) = f^\top(\mathbf{v}(t), \mathbf{v}(t+1), \mathbf{m}, \delta \mathbf{d})``
 | 2. ``v_z(\mathbf{x}) += \mathbf{v}(t, \mathbf{x})^\top \mathbf{Z}``
 | ``\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(u_z v_z)``
 : Seismic inversion via probed trace estimation where ``f, f^\top`` are the forward and backward time-stepping operators.
 
-We compute our estimate for varying probing sizes and compare it to the true gradient on Figure #2d-grad\ . We show the probed estimate for varying number of probing vectors and the difference with true gradient. W ca clearly see that the accuracy increases wit the number of probing vectors and that we alread obtain an good approximation with as little as 16 to 32 vectors.
+We compute our estimate for varying probing sizes and compare it to the true gradient on Figure #2d-grad\ . We show the probed estimate for varying number of probing vectors and the difference with true gradient. W ca clearly see that the accuracy increases wit the number of probing vectors and that we alread obtain a good approximation with as little as 16 to 32 vectors.
 
 #### Figure: {#2d-grad}
 ![](./figures/Probed_grad.png){width=100%}\
@@ -122,7 +122,7 @@ This property makes our probing method extremely advantageous as these imaging o
 
 In order to make our method very efficient, the choice of probing vectors ``\mathbf{z}_i`` is crucial. In its most simple formulation, this matrix probing method only requires random vectors from the normal distribution ``\mathbf{z}_i \in \mathbb{N}(0, 1)`` or the Radamaecher distribution (random ``\pm 1``) [@Avron]. However, matrix probing with these vectors has fairly low convergence rate and requires large number of probing vectors (``N >> 1``). To improve the estimate, [@hutchpp] proposed to compute a QR decomposition of the range of the matrix to be probed ``\mathbf{Z} = QR(\mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top S)`` with ``S`` an ``n_t \times N`` matrix of ``± 1``. In theory, this QR factorization greatly improves the estimation. However, computing a QR factorization for each subsurface point would be unfeasible. As a proxy for the outer product of the wavefields, we compute a single probing matrix for the entire subsurface based on the observed data ``Z = QR(\mathbf{d}_{obs}\mathbf{d}_{obs}^\top S)`` since the data is the restriction of a wavefield.
 
-We show what the probing vectors look like on Figure #pvec. It is of importance that these vectors are orthonormal but do not form a basis. They satisfy ``\mathbf{Z} \mathbf{Z}^\top = I`` but ``\mathbf{Z}^top \mathbf{Z} \neq I`` is a low rank approximation of ``\mathbf{d}_{obs} \mathbf{d}_{obs}^\top`` as shown on Figure #pvec\. This sets our method apart from transform domain methods such as on-the-fly DFT that can be interpreted as probing methods where the probing vectors are a subset of the Fourier basis.
+We show what the probing vectors look like on Figure #pvec. It is of importance that these vectors are orthonormal but do not form a basis. They satisfy ``\mathbf{Z} \mathbf{Z}^\top = I`` but ``\mathbf{Z}^\top \mathbf{Z} \neq I`` is a low rank approximation of ``\mathbf{d}_{obs} \mathbf{d}_{obs}^\top`` as shown on Figure #pvec\. This sets our method apart from transform domain methods such as on-the-fly DFT that can be interpreted as probing methods where the probing vectors are a subset of the Fourier basis.
 
 #### Figure: {#pvec}
 ![](./figures/Zi.png){width=100%}
@@ -131,26 +131,27 @@ We show what the probing vectors look like on Figure #pvec. It is of importance 
 
 ## Example
 
-We illustrate our method on the 2D overthrust model and compare our inversion results to conventional FWI and on-the-fly DFT. The model is 20km by 5km isotropic acoustic. The dataset consists of 97 sources at 50m depth and 127 ocean bottom nodes (500m depth) 50m apart. The source function is an 8Hz Ricker wavelet. We show the true model and the initial background model on Figure #2d-setuo\.
+We illustrate our method on the 2D overthrust model and compare our inversion results to conventional FWI and on-the-fly DFT. The model is 20km by 5km isotropic acoustic. The dataset consists of 97 sources at 50m depth and 127 ocean bottom nodes (500m depth) 50m apart. The source function is an 8Hz Ricker wavelet. We show the true model and the initial background model on Figure #2d-setup\.
 
 
 #### Figure: {#2d-setup}
 ![](./figures/init.png){width=100%}
 : True (top) and initial (bottom) velocity models for inversion.
 
-In all the experiments presented here, we ran 20 iteration of spectral projected gradient (gradient descent with box constraints) [@mlr-v5-schmidt09a] with 20 randomly selected shots per iteration [@Aravkin11TRridr].
+In all the experiments presented here, we ran 20 iteration of spectral projected gradient (gradient descent with box constraints) [@schmidt09a] with 20 randomly selected shots per iteration [@Aravkin11TRridr]. We show the standard FWI inversion result for reference in both cases. We can clearly see on Figures #2d-fwi-probed that our probed gradient allows the inversion to carry towards a good result. As expected, for very few probing vectors, we do not converge since our approximation is too far from the true gradient, however, we start to obtain a result comparable to the true model with as few as 8 probing vectors and such result could ven be improved with some constraints or regularization. On the other hand, we can see on figure #2d-fwi-dft that for an equivalent memory cost, on-the-fly DFT fails to converge to an acceptable result for any number of frequencies, most likely due to the coherent artifact steming from the DFT. These results should however be improved by either a better choice of selected frequencies or by adding extra constraints and regularizations as well.
 
 
 #### Figure: {#2d-fwi-dft}
 ![](./figures/DFT_fwi.png){width=100%}
-: FWI on the 2D overthrust model with varying number of probing vectors.
+: On-the-fly DFT FWI on the 2D overthrust model with varying number of frequencies.
 
 #### Figure: {#2d-fwi-probed}
 ![](./figures/probed_fwi.png){width=100%}
-: FWI on the 2D overthrust model with varying number of probing vectors.
+: Probed FWI on the 2D overthrust model with varying number of probing vectors.
 
+We finally compare the three traces vertical highlighted in black on Figure #2d-setup to detail the accuracy of the inverted velocity on Figure #2d-fwi-tr\. These traces show that our probed inversion result is extremely close to standard FWI and that we obtain a result close to the true model.
 
-#### Figure: {#2d-fwi-conv}
+#### Figure: {#2d-fwi-tr}
 ![](./figures/vertical_trace_200_select.png){width=33%}
 ![](./figures/vertical_trace_480_select.png){width=33%}
 ![](./figures/vertical_trace_680_select.png){width=33%}

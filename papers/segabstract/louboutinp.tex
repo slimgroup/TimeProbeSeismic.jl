@@ -135,11 +135,15 @@ subfigures and captions in markown\textless{}\textless{}\}
 \item
   \citet{louboutin2015segtcs}
 \item
-  \citet{witte2018cls}, bp ref, chvron ref
+  \citet{witte2018cls}, bp \citep{Sirgue2010}, \citep{Nihei2007}
 \item
-  checkpointing (griewank, symes navjot)
+  Time reverse \citep[\citet{Mittet}, \citet{RaknesR45}]{McMechan}
 \item
-  Mengmeng EV
+  checkpointing \citep[\citet{Symes2007}, \citet{kukrejacomp}]{Griewank}
+\item
+  probing \citep[\citet{hutchpp}]{Avron}
+\item
+  Mengmeng EV \citep[\citet{yang2020lrpo}]{vanleeuwen2015GPWEMVA}
 \item
   Implemented on top of JUDI \citep{witte2018alf} using Devito for the
   wave equations propagators
@@ -168,7 +172,7 @@ the isotropic acoustic case), $\mathbf{q}$ is the source,
 $\mathbf{d}_{obs}$ is the observed data and $\mathbf{F}$ is the forward
 modeling operator. This data misfit is usually minimized using
 gradient-based optimization methods such as gradient descent
-\citep{plessixasfwi} or gauss-newton {[}maybe xiangli ref{]} are
+\citep{plessixasfwi} or gauss-newton \citep{li2015GEOPmgn} are
 necessary. In this work, we propose an unbiased estimate of that
 gradient, which means that that estimate equals the FWI gradient in
 expectation. In the following section, we describe our proposed method
@@ -200,11 +204,11 @@ follows.
 in space requires an $n_t x n_t$ matrix, with $n_t$ the number of
 computational time steps. Computing this outer product woudl therefore
 require $n_t$ more memory than standard FWI. To tackle this memory
-bottleneck, we instead compute this trace via matrix probing {[}format
-probing refs{]}. Matrix probing is a method that provides information
-about a matrix, in this case the trace, via matrix vector products when
-the matrix itself is either unknwn or too expensive to compute. The
-trace estimation of our outer product wrties as follows:
+bottleneck, we instead compute this trace via matrix probing
+\citep[\citet{hutcpp}]{Avron}. Matrix probing is a method that provides
+information about a matrix, in this case the trace, via matrix vector
+products when the matrix itself is either unknwn or too expensive to
+compute. The trace estimation of our outer product wrties as follows:
 %
 \begin{equation}
 \begin{split}
@@ -256,15 +260,16 @@ above Equation~\ref{trpr}, that memory optimal schedule is:
   \end{enumerate}
 \end{itemize}
 
-Through these three steps, we obtain the unbiased {[}refs{]} estimate of
-the true update $\mathbb{E}(\tilde{\mathcal{I}}) = \mathcal{I}$ that
-only requires randomized accumulation of the wavefields during their
-respective propagation. These three memory-optimal steps can then be
-merged with the time-stepper to implement efficient on-the-fly matrix
-probing, summarized in algorithm~\ref{pic}.
+Through these three steps, we obtain the unbiased \citep{hutchpp}
+estimate of the true update
+$\mathbb{E}(\tilde{\mathcal{I}}) = \mathcal{I}$ that only requires
+randomized accumulation of the wavefields during their respective
+propagation. These three memory-optimal steps can then be merged with
+the time-stepper to implement efficient on-the-fly matrix probing,
+summarized in algorithm~\ref{pic}.
 
 \begin{scholmdAlgorithm}
-\textbf{for~t=1:nt}\\1.~$\mathbf{u}(t+1) = f(\mathbf{u}(t), \mathbf{u}(t-1), \mathbf{m}, \mathbf{q})$\\2.~$u_z(\mathbf{x}) += \mathbf{Z}^\top \mathbf{u}(t, \mathbf{x})$\\\textbf{for~t=nt:1}\\1.~$\mathbf{v}(t-1) = f^\top(\mathbf{v}(t), \mathbf{v}(t+1), \mathbf{m}, δ \mathbf{d})$\\2.~$v_z(\mathbf{x}) += \mathbf{v}(t, \mathbf{x})^\top \mathbf{Z}$\\$\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(u_z v_z)$
+\textbf{for~t=1:nt}\\1.~$\mathbf{u}(t+1) = f(\mathbf{u}(t), \mathbf{u}(t-1), \mathbf{m}, \mathbf{q})$\\2.~$u_z(\mathbf{x}) += \mathbf{Z}^\top \mathbf{u}(t, \mathbf{x})$\\\textbf{for~t=nt:1}\\1.~$\mathbf{v}(t-1) = f^\top(\mathbf{v}(t), \mathbf{v}(t+1), \mathbf{m}, \delta \mathbf{d})$\\2.~$v_z(\mathbf{x}) += \mathbf{v}(t, \mathbf{x})^\top \mathbf{Z}$\\$\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(u_z v_z)$
 \caption{Seismic inversion via probed trace estimation where $f, f^\top$
 are the forward and backward time-stepping operators.}\label{pic}
 \end{scholmdAlgorithm}
@@ -273,8 +278,8 @@ We compute our estimate for varying probing sizes and compare it to the
 true gradient on Figure \#2d-grad~. We show the probed estimate for
 varying number of probing vectors and the difference with true gradient.
 W ca clearly see that the accuracy increases wit the number of probing
-vectors and that we alread obtain an good approximation with as little
-as 16 to 32 vectors.
+vectors and that we alread obtain a good approximation with as little as
+16 to 32 vectors.
 
 \begin{figure}
 \centering
@@ -294,9 +299,11 @@ compared to conventional FWI whith a very small computationnal overhead
 
 From this formulation, we can estimate the memory imprint of our method
 compared to conventional FWI. For completeness, we also consider other
-mainstream low memory methods: optimal checkpointing {[}refs{]},
-boundary methods {[}refs{]}, and DFT methods \citep{witte2018cls}. This
-memory overview generalizes to other wave-equations and imaging
+mainstream low memory methods: optimal checkpointing
+\citep[\citet{Symes2007}, \citet{kukrejacomp}]{Griewank}, boundary
+methods \citep[\citet{Mittet}, \citet{RaknesR45}]{McMechan}, and DFT
+methods \citep[\citet{Sirgue2010} ,\citet{Nihei2007}]{witte2018cls}.
+This memory overview generalizes to other wave-equations and imaging
 conditions easily as our method generalizes to any adjoint-state,
 zero-lag cross-correlation. We estimate the memory requirements for a
 three-dimensional domain with $N_x N_y N_z$ grid points and $n_t$ time
@@ -337,14 +344,17 @@ for real-world applications.
 
 \subsection{Imaging condtions}\label{imaging-condtions}
 
-In some cases, such as reverse-time migration (RTM) or to add eemphasis
+In some cases, such as reverse-time migration (RTM) or to add emphasis
 to a certain range of wavenumber for FWI, an imaging condtion may be
 applied to the forward and adjoint wavefield instead of using the
-adjoint state gradient. Usually, these imaging condition can be
-expressed as linear operators that only act on the spatial dimension fo
-the wavefields. Because such operators are linear and independent of
-times, we can factor them out and directl apply them to the probed
-vectors rather than at every time steps. This property can be seen from
+standard adjoint state gradient. Examples ofthese imaging conditions are
+the inverse scattering imaging condition
+\citep[\citet{witteisic}]{Whitmore} for RTM or wavefield separation
+\citep{Faqi} for FWI. Usually, these imaging condition can be expressed
+as linear operators that only act on the spatial dimension fo the
+wavefields. Because such operators are linear and independent of times,
+we can factor them out and directl apply them to the probed vectors
+rather than at every time steps. This property can be seen from
 rewriting Equation~\ref{trpr} as:
 %
 \begin{equation}
@@ -370,19 +380,19 @@ In order to make our method very efficient, the choice of probing
 vectors $\mathbf{z}_i$ is crucial. In its most simple formulation, this
 matrix probing method only requires random vectors from the normal
 distribution $\mathbf{z}_i \in \mathbb{N}(0, 1)$ or the Radamaecher
-distribution (random $\pm 1$) {[}refs{]}. However, matrix probing with
-these vectors has fairly low convergence rate and requires large number
-of probing vectors ($N >> 1$). To improve the estimate, {[}ref{]}
-proposed to compute a QR decomposition of the range of the matrix to be
-probed
+distribution (random $\pm 1$) \citep{Avron}. However, matrix probing
+with these vectors has fairly low convergence rate and requires large
+number of probing vectors ($N >> 1$). To improve the estimate,
+\citep{hutchpp} proposed to compute a QR decomposition of the range of
+the matrix to be probed
 $\mathbf{Z} = QR(\mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top S)$
 with $S$ an $n_t \times N$ matrix of $± 1$. In theory, this QR
-factorization greatly improves the estimation \citep{refs}. However,
-computing a QR factorization for each subsurface point would be
-unfeasible. As a proxy for the outer product of the wavefields, we
-compute a single probing matrix for the entire subsurface based on the
-observed data $Z = QR(\mathbf{d}_{obs}\mathbf{d}_{obs}^\top S)$ since
-the data is the restriction of a wavefield.
+factorization greatly improves the estimation. However, computing a QR
+factorization for each subsurface point would be unfeasible. As a proxy
+for the outer product of the wavefields, we compute a single probing
+matrix for the entire subsurface based on the observed data
+$Z = QR(\mathbf{d}_{obs}\mathbf{d}_{obs}^\top S)$ since the data is the
+restriction of a wavefield.
 
 We show what the probing vectors look like on Figure \#pvec. It is of
 importance that these vectors are orthonormal but do not form a basis.
@@ -417,8 +427,8 @@ inversion.}
 
 In all the experiments presented here, we ran 20 iteration of spectral
 projected gradient (gradient descent with box constraints)
-\citep{minconf} with 20 randomly selected shots per iteration {[}felix
-ref{]}.
+\citep{schmidt09a} with 20 randomly selected shots per iteration
+\citep{Aravkin11TRridr}.
 
 \begin{figure}
 \centering
