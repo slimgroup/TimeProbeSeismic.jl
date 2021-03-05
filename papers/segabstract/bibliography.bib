@@ -1,0 +1,201 @@
+@article{devito-api,
+  author = {Louboutin, M. and Lange, M. and Luporini, F. and Kukreja, N. and Witte, P. A. and Herrmann, F. J. and Velesko, P. and Gorman, G. J.},
+  title = {Devito (v3.1.0): an embedded domain-specific language for finite differences and geophysical exploration},
+  journal = {{Geoscientific Model Development}},
+  volume = {12},
+  year = {2019},
+  number = {3},
+  pages = {1165--1187},
+  url = {https://www.geosci-model-dev.net/12/1165/2019/},
+  doi = {10.5194/gmd-12-1165-2019}
+}
+
+@article{devito-compiler,
+author = {Luporini, Fabio and Louboutin, Mathias and Lange, Michael and Kukreja, Navjot and Witte, Philipp and H\"{u}ckelheim, Jan and Yount, Charles and Kelly, Paul H. J. and Herrmann, Felix J. and Gorman, Gerard J.},
+title = {Architecture and Performance of Devito, a System for Automated Stencil Computation},
+year = {2020},
+issue_date = {April 2020},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {46},
+number = {1},
+issn = {0098-3500},
+url = {https://doi.org/10.1145/3374916},
+doi = {10.1145/3374916},
+abstract = {Stencil computations are a key part of many high-performance computing applications, such as image processing, convolutional neural networks, and finite-difference solvers for partial differential equations. Devito is a framework capable of generating highly optimized code given symbolic equations expressed in Python, specialized in, but not limited to, affine (stencil) codes. The lowering process—from mathematical equations down to C++ code—is performed by the Devito compiler through a series of intermediate representations. Several performance optimizations are introduced, including advanced common sub-expressions elimination, tiling, and parallelization. Some of these are obtained through well-established stencil optimizers, integrated in the backend of the Devito compiler. The architecture of the Devito compiler, as well as the performance optimizations that are applied when generating code, are presented. The effectiveness of such performance optimizations is demonstrated using operators drawn from seismic imaging applications.},
+journal = {ACM Trans. Math. Softw.},
+month = apr,
+articleno = {6},
+numpages = {28},
+keywords = {symbolic processing, stencil, structured grid, compiler, Finite-difference method, performance optimization, domain-specific language}
+}
+
+@article{witte2018alf,
+	title = {A large-scale framework for symbolic implementations of seismic inversion algorithms in Julia},
+	journal = {Geophysics},
+	volume = {84},
+	number = {3},
+	year = {2019},
+	note = {(Geophysics)},
+	month = {03},
+	pages = {F57-F71},
+	keywords = {FWI, inversion, LSRTM, Modeling, software},
+	doi = {10.1190/geo2018-0174.1},
+	url = {https://slim.gatech.edu/Publications/Public/Journals/Geophysics/2019/witte2018alf/witte2018alf.pdf},
+	author = {Philipp A. Witte and Mathias Louboutin and Navjot Kukreja and Fabio Luporini and Michael Lange and Gerard J. Gorman and Felix J. Herrmann}
+}
+
+
+@article{virieux,
+  author	= {J. Virieux and S. Operto},
+  doi		= {10.1190/1.3238367},
+  eprint	= {http://library.seg.org/doi/pdf/10.1190/1.3238367},
+  journal	= {GEOPHYSICS},
+  number	= {5},
+  pages		= {WCC1-WCC26},
+  title		= {An overview of full-waveform inversion in exploration
+		  geophysics},
+  url		= {http://library.seg.org/doi/abs/10.1190/1.3238367},
+  volume	= {74},
+  year		= {2009},
+  bdsk-url-1	= {http://library.seg.org/doi/abs/10.1190/1.3238367},
+  bdsk-url-2	= {http://dx.doi.org/10.1190/1.3238367}
+}
+
+@article{haber10tremp,
+  abstract	= {Often, parameter estimation problems of
+		  parameter-dependent PDEs involve multiple right-hand sides.
+		  The computational cost and memory requirements of such
+		  problems increase linearly with the number of right-hand
+		  sides. For many applications this is the main bottleneck of
+		  the computation. In this paper we show that problems with
+		  multiple right-hand sides can be reformulated as stochastic
+		  programming problems by combining the right-hand sides into
+		  a few {\quotedblbase}simultaneous{\textquotedblright}
+		  sources. This effectively reduces the cost of the forward
+		  problem and results in problems that are much cheaper to
+		  solve. We discuss two solution methodologies: namely sample
+		  average approximation and stochastic approximation. To
+		  illustrate the effectiveness of our approach we present two
+		  model problems, direct current resistivity and seismic
+		  tomography.},
+  author	= {Eldad Haber and Matthias Chung and Felix J. Herrmann},
+  journal	= {SIAM Journal on Optimization},
+  keywords	= {FWI, Optimization, SLIM},
+  month		= {7},
+  number	= {3},
+  publisher	= {UBC-Earth and Ocean Sciences Department},
+  title		= {An effective method for parameter estimation with {PDE}
+		  constraints with multiple right hand sides},
+  url		= {http://dx.doi.org/10.1137/11081126X},
+  volume	= {22},
+  year		= {2012},
+  bdsk-url-1	= {http://dx.doi.org/10.1137/11081126X}
+}
+
+@article{tarantola,
+  author	= {Tarantola, Albert},
+  title		= {Inversion of seismic reflection data in the acoustic
+		  approximation},
+  journal	= {GEOPHYSICS},
+  volume	= {49},
+  number	= {8},
+  pages		= {1259},
+  year		= {1984},
+  doi		= {10.1190/1.1441754},
+  url		= { + http://dx.doi.org/10.1190/1.1441754},
+  eprint	= {/gsw/content_public/journal/geophysics/49/8/10.1190_1.1441754/5/1259.pdf}
+}
+
+@Book{		  lionsjl1971,
+  author	= {Lions, J. L.},
+  edition	= {1st},
+  isbn		= {978-3-642-65026-0},
+  publisher	= {Springer-Verlag Berlin Heidelberg},
+  title		= {Optimal control of systems governed by partial
+		  differential equations},
+  year		= {1971}
+}
+
+
+@Article{	  plessixasfwi,
+  author	= {Plessix, R.-E.},
+  doi		= {10.1111/j.1365-246X.2006.02978.x},
+  issn		= {1365-246X},
+  journal	= {Geophysical Journal International},
+  keywords	= {adjoint state, gradient, migration, tomography},
+  number	= {2},
+  pages		= {495--503},
+  publisher	= {Blackwell Publishing Ltd},
+  title		= {A review of the adjoint-state method for computing the
+		  gradient of a functional with geophysical applications},
+  url		= {http://dx.doi.org/10.1111/j.1365-246X.2006.02978.x},
+  volume	= {167},
+  year		= {2006},
+  bdsk-url-1	= {http://dx.doi.org/10.1111/j.1365-246X.2006.02978.x}
+}
+
+@article {louboutin2017fwi,
+	title = {Full-Waveform Inversion - Part 1: forward modeling},
+	journal = {The Leading Edge},
+	volume = {36},
+	number = {12},
+	year = {2017},
+	note = {(The Leading Edge)},
+	month = {12},
+	pages = {1033-1036},
+	abstract = {Since its re-introduction by Pratt (1999), full-waveform inversion (FWI) has gained a lot of attention in geophysical exploration because of its ability to build high resolution velocity models more or less automatically in areas of complex geology. While there is an extensive and growing literature on the topic, publications focus mostly on technical aspects, making this topic inaccessible for a broader audience due to the lack of simple introductory resources for newcomers to geophysics. We will accomplish this by providing a hands-on walkthrough of FWI using Devito (Lange et al. 2016), a system based on domain-specific languages that automatically generates code for time-domainfinite-differences.},
+	keywords = {devito, finite-differences, FWI, Modeling, tutorial},
+	doi = {10.1190/tle36121033.1},
+	url = {https://slim.gatech.edu/Publications/Public/Journals/TheLeadingEdge/2017/louboutin2017fwi/louboutin2017fwi.html},
+	author = {Mathias Louboutin and Philipp A. Witte and Michael Lange and Navjot Kukreja and Fabio Luporini and Gerard Gorman and Felix J. Herrmann}
+}
+
+@article {louboutin2017fwip2,
+	title = {Full-Waveform Inversion - Part 2: adjoint modeling},
+	journal = {The Leading Edge},
+	volume = {37},
+	number = {1},
+	year = {2018},
+	note = {(The Leading Edge)},
+	month = {1},
+	pages = {69-72},
+	abstract = {This tutorial is the second part of a three part tutorial series on full-waveform inversion (FWI), in which we provide a step by step walk through of setting up forward and adjoint wave equation solvers and an optimization framework for inversion. In part 1 (Louboutin et al., 2017), we demonstrated how to discretize the acoustic wave equation and how to set up a basic forward modeling scheme using Devito, a domain-specific language (DSL) in Python for automated finite-difference (FD) computations (Lange et al., 2016). Devito allows us to define wave equations as symbolic Python expressions (Meurer et al., 2017), from which optimized FD stencil code is automatically generated at run time. In part 1, we show how we can use Devito to set up and solve acoustic wave equations with (impulsive) seismic sources and sample wavefields at the receiver locations to model shot records.},
+	keywords = {acoustic, devito, finite-difference, FWI, tutorial},
+	doi = {10.1190/tle37010069.1},
+	url = {https://slim.gatech.edu/Publications/Public/Journals/TheLeadingEdge/2018/louboutin2017fwip2/louboutin2017fwip2.html},
+	author = {Mathias Louboutin and Philipp A. Witte and Michael Lange and Navjot Kukreja and Fabio Luporini and Gerard Gorman and Felix J. Herrmann}
+}
+
+@Conference{	  louboutin2015segtcs,
+  booktitle	= {SEG Technical Program Expanded Abstracts},
+  doi		= {10.1190/segam2015-5924937.1},
+  keywords	= {acoustic, Full-waveform inversion, inversion, SEG,
+		  Stochastic optimization, Subsampling, Time-domain},
+  month		= {10},
+  note		= {(SEG, New Orleans)},
+  pages		= {5153-5157},
+  presentation	= {https://www.slim.eos.ubc.ca/Publications/Public/Conferences/SEG/2015/louboutin2015SEGtcs/louboutin2015SEGtcs_poster.pdf},
+  title		= {Time compressively sampled full-waveform inversion with
+		  stochastic optimization},
+  url		= {https://www.slim.eos.ubc.ca/Publications/Public/Conferences/SEG/2015/louboutin2015SEGtcs/louboutin2015SEGtcs.html},
+  year		= {2015},
+  bdsk-url-1	= {https://www.slim.eos.ubc.ca/Publications/Public/Conferences/SEG/2015/louboutin2015SEGtcs/louboutin2015SEGtcs.html},
+  bdsk-url-2	= {http://dx.doi.org/10.1190/segam2015-5924937.1}
+}
+
+@article{   witte2018cls,
+	title = {Compressive least-squares migration with on-the-fly Fourier transforms},
+	journal = {Geophysics},
+	volume = {84},
+	number = {5},
+	year = {2019},
+	note = {(Geophysics)},
+	month = {08},
+	pages = {R655-R672},
+	abstract = {Least-squares reverse-time migration is a powerful approach for true amplitude seismic imaging of complex geological structures, but the successful application of this method is currently hindered by its enormous computational cost, as well as high memory requirements for computing the gradient of the objective function. We tackle these problems by introducing an algorithm for low-cost sparsity-promoting least-squares migration using on-the-fly Fourier transforms. We formulate the least-squares migration objective function in the frequency domain and compute gradients for randomized subsets of shot records and frequencies, thus significantly reducing data movement and the number of overall wave equations solves. By using on-the-fly Fourier transforms, we can compute an arbitrary number of monochromatic frequency-domain wavefields with a time-domain modeling code, instead of having to solve individual Helmholtz equations for each frequency, which quickly becomes computationally infeasible when moving to high frequencies. Our numerical examples demonstrate that compressive imaging with on-the-fly Fourier transforms provides a fast and memory-efficient alternative to time-domain imaging with optimal checkpointing, whose memory requirements for a fixed background model and source wavelet is independent of the number of time steps. Instead, memory and additional computational cost grow with the number of frequencies and determine the amount of subsampling artifacts and crosstalk. In contrast to optimal checkpointing, this offers the possibility to trade both memory and computational cost for image quality or a larger number of iterations and is advantageous in new computing environments such as the cloud, where compute is often cheaper than memory and data movement.},
+	keywords = {Fourier, least squares migration, sparsity-promotion},
+	doi = {10.1190/geo2018-0490.1},
+	url = {https://slim.gatech.edu/Publications/Public/Journals/Geophysics/2019/witte2018cls/witte2018cls.pdf},
+	author = {Philipp A. Witte and Mathias Louboutin and Fabio Luporini and Gerard J. Gorman and Felix J. Herrmann}
+}
