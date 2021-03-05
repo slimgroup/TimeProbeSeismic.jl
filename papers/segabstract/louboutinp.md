@@ -7,6 +7,7 @@ bibliography:
     - bibliography.bib
 ---
 
+
 ## Summary
 
 {>> Redo all figures as individual ones with subfigures and captions in markown<<}
@@ -14,9 +15,11 @@ bibliography:
 ## Introduction
 
 - @louboutin2015segtcs
-- @witte2018cls, bp ref, chvron ref
-- checkpointing (griewank, symes navjot)
-- Mengmeng EV
+- @witte2018cls, bp [@Sirgue2010], [@Nihei2007]
+- Time reverse [@McMechan, @Mittet, @RaknesR45]
+- checkpointing [@Griewank, @Symes2007, @kukrejacomp]
+- probing [@Avron, @hutchpp]
+- Mengmeng EV [@vanleeuwen2015GPWEMVA, @yang2020lrpo]
 
 - Implemented on top of JUDI [@witte2018alf] using Devito for the wave equations propagators [@devito-api, @devito-compiler]. Thanks to Devito's flexibility and JUDI's separation of concern, we can easily run the inversion with our memory efficient method on GPU with the same code adding a single flag.
 
@@ -28,7 +31,7 @@ We consider the standard adjoint-state FWI problem that aims a minimizing the di
 \underset{\mathbf{m}}{\operatorname{minimize}} \ \frac{1}{2} ||\mathbf{F}(\mathbf{m}; \mathbf{q}) - \mathbf{d}_{obs} ||_2^2
 ```
 
-where ``\mathbf{m}`` is the physical model parameter (squared slowness in the isotropic acoustic case), ``\mathbf{q}`` is the source, ``\mathbf{d}_{obs}`` is the observed data and ``\mathbf{F}`` is the forward modeling operator. This data misfit is usually minimized using gradient-based optimization methods such as gradient descent [@plessixasfwi] or gauss-newton [maybe xiangli ref] are necessary. In this work, we propose an unbiased estimate of that gradient, which means that that estimate equals the FWI gradient in expectation. In the following section, we describe our proposed method in the isotropic acoustic case.
+where ``\mathbf{m}`` is the physical model parameter (squared slowness in the isotropic acoustic case), ``\mathbf{q}`` is the source, ``\mathbf{d}_{obs}`` is the observed data and ``\mathbf{F}`` is the forward modeling operator. This data misfit is usually minimized using gradient-based optimization methods such as gradient descent [@plessixasfwi] or gauss-newton [@li2015GEOPmgn] are necessary. In this work, we propose an unbiased estimate of that gradient, which means that that estimate equals the FWI gradient in expectation. In the following section, we describe our proposed method in the isotropic acoustic case.
 
 ### Adjoint state gradient
 
@@ -44,7 +47,7 @@ where ``\mathbf{u}, \mathbf{v}`` are the forward and adjoint wavefields solution
 \mathcal{I}(\mathbf{x}) = \text{tr}(\mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top).
 ```
 
-This outer product is in practice not feasible to compute as each point in space requires an ``n_t x n_t`` matrix, with ``n_t`` the number of computational time steps. Computing this outer product woudl therefore require ``n_t`` more memory than standard FWI. To tackle this memory bottleneck, we instead compute this trace via matrix probing [format probing refs]. Matrix probing is a method that provides information about a matrix, in this case the trace, via matrix vector products when the matrix itself is either unknwn or too expensive to compute. The trace estimation of our outer product wrties as follows:
+This outer product is in practice not feasible to compute as each point in space requires an ``n_t x n_t`` matrix, with ``n_t`` the number of computational time steps. Computing this outer product woudl therefore require ``n_t`` more memory than standard FWI. To tackle this memory bottleneck, we instead compute this trace via matrix probing [@Avron, @hutcpp]. Matrix probing is a method that provides information about a matrix, in this case the trace, via matrix vector products when the matrix itself is either unknwn or too expensive to compute. The trace estimation of our outer product wrties as follows:
  
 ```math {#trpr}
     \tilde{\mathcal{I}}(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^{N} \mathbf{z}_i^\top \mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top \mathbf{z}_i \\
@@ -63,7 +66,7 @@ where ``\mathbf{Z}`` is the matrix with each ``\mathbf{z}_i`` in its column. We 
 - 1. ``v_z = \mathbf{v}(\mathbf{x})^\top \mathbf{Z} ``
 - 3. ``\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(u_z v_z)``.
 
-Through these three steps, we obtain the unbiased [refs] estimate of the true update ``\mathbb{E}(\tilde{\mathcal{I}}) = \mathcal{I}`` that only requires randomized accumulation of the wavefields during their respective propagation. These three memory-optimal steps can then be merged with the time-stepper to implement efficient on-the-fly matrix probing, summarized in algorithm #pic\.
+Through these three steps, we obtain the unbiased [@hutchpp] estimate of the true update ``\mathbb{E}(\tilde{\mathcal{I}}) = \mathcal{I}`` that only requires randomized accumulation of the wavefields during their respective propagation. These three memory-optimal steps can then be merged with the time-stepper to implement efficient on-the-fly matrix probing, summarized in algorithm #pic\.
 
 ### Algorithm: {#pic}
 | **for t=1:nt**
@@ -87,7 +90,7 @@ With this few probing vector, we obtain massive memory reduction compared to con
 
 ### Memory estimates
 
-From this formulation, we can estimate the memory imprint of our method compared to conventional FWI. For completeness, we also consider other mainstream low memory methods: optimal checkpointing [refs], boundary methods [refs], and DFT methods [@witte2018cls]. This memory overview generalizes to other wave-equations and imaging conditions easily as our method generalizes to any adjoint-state, zero-lag cross-correlation. We estimate the memory requirements for a three-dimensional domain with ``N_x N_y N_z`` grid points and ``n_t`` time steps. Conventional FWI requires to save the full time-space forward wavefield to compute the gradient. This requirement leads to a memory requirement of ``N n_t`` floating point values of memory in single precision. Our method, on the other hand, for ``p_s`` probing vector (i.e ``\mathbf{Z} \in \mathbb{R}^{n_t \times p_s}``), requires ``N p_s`` floating point values in the forward pass and ``N p_s`` in the backward pass for a total of ``2 N p_s`` value. The memory reduction factor is therefore ``\frac{n_t}{2 p_s}``. This memory reduction is similar to computing the gradient with ``p_s`` Fourier modes, i.e on-the-fly Fourier [@witte2018cls]. We summarize the memory usage compared to state-of-the-art algorithms in table #memest\.
+From this formulation, we can estimate the memory imprint of our method compared to conventional FWI. For completeness, we also consider other mainstream low memory methods: optimal checkpointing [@Griewank, @Symes2007, @kukrejacomp], boundary methods [@McMechan, @Mittet, @RaknesR45], and DFT methods [@witte2018cls,@Sirgue2010 ,@Nihei2007]. This memory overview generalizes to other wave-equations and imaging conditions easily as our method generalizes to any adjoint-state, zero-lag cross-correlation. We estimate the memory requirements for a three-dimensional domain with ``N_x N_y N_z`` grid points and ``n_t`` time steps. Conventional FWI requires to save the full time-space forward wavefield to compute the gradient. This requirement leads to a memory requirement of ``N n_t`` floating point values of memory in single precision. Our method, on the other hand, for ``p_s`` probing vector (i.e ``\mathbf{Z} \in \mathbb{R}^{n_t \times p_s}``), requires ``N p_s`` floating point values in the forward pass and ``N p_s`` in the backward pass for a total of ``2 N p_s`` value. The memory reduction factor is therefore ``\frac{n_t}{2 p_s}``. This memory reduction is similar to computing the gradient with ``p_s`` Fourier modes, i.e on-the-fly Fourier [@witte2018cls]. We summarize the memory usage compared to state-of-the-art algorithms in table #memest\.
 
 ### Table: {#memest}
 |        |    FWI    |   DFT   |   Probing   | Optimal checkpointing| Boundary reconstruction |
@@ -101,7 +104,7 @@ It is worth noting that unlike the other methods in the table, boundary reconstr
 
 ### Imaging condtions
 
-In some cases, such as reverse-time migration (RTM) or to add eemphasis to a certain range of wavenumber for FWI, an imaging condtion may be applied to the forward and adjoint wavefield instead of using the adjoint state gradient. Usually, these imaging condition can be expressed as linear operators that only act on the spatial dimension fo the wavefields. Because such operators are linear and independent of times, we can factor them out and directl apply them to the probed vectors rather than at every time steps. This property can be seen from rewriting Equation #trpr as:
+In some cases, such as reverse-time migration (RTM) or to add emphasis to a certain range of wavenumber for FWI, an imaging condtion may be applied to the forward and adjoint wavefield instead of using the standard adjoint state gradient. Examples ofthese imaging conditions are the inverse scattering imaging condition [@Whitmore, @witteisic] for RTM or wavefield separation [@Faqi] for FWI. Usually, these imaging condition can be expressed as linear operators that only act on the spatial dimension fo the wavefields. Because such operators are linear and independent of times, we can factor them out and directl apply them to the probed vectors rather than at every time steps. This property can be seen from rewriting Equation #trpr as:
 
 ```math {#trpr_t}
     \tilde{\mathcal{I}}(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^{N} \left [ \sum_{t=1}^{n_t} (\mathbf{z}_i(t) \mathbf{u}(t, \mathbf{x})) \sum_{t=1}^{n_t}(\mathbf{v}(t, \mathbf{x}) \mathbf{z}_i(t)) \right ]
@@ -117,7 +120,7 @@ This property makes our probing method extremely advantageous as these imaging o
 
 ### Probing vectors
 
-In order to make our method very efficient, the choice of probing vectors ``\mathbf{z}_i`` is crucial. In its most simple formulation, this matrix probing method only requires random vectors from the normal distribution ``\mathbf{z}_i \in \mathbb{N}(0, 1)`` or the Radamaecher distribution (random ``\pm 1``) [refs]. However, matrix probing with these vectors has fairly low convergence rate and requires large number of probing vectors (``N >> 1``). To improve the estimate, [ref] proposed to compute a QR decomposition of the range of the matrix to be probed ``\mathbf{Z} = QR(\mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top S)`` with ``S`` an ``n_t \times N`` matrix of ``± 1``. In theory, this QR factorization greatly improves the estimation [@refs]. However, computing a QR factorization for each subsurface point would be unfeasible. As a proxy for the outer product of the wavefields, we compute a single probing matrix for the entire subsurface based on the observed data ``Z = QR(\mathbf{d}_{obs}\mathbf{d}_{obs}^\top S)`` since the data is the restriction of a wavefield.
+In order to make our method very efficient, the choice of probing vectors ``\mathbf{z}_i`` is crucial. In its most simple formulation, this matrix probing method only requires random vectors from the normal distribution ``\mathbf{z}_i \in \mathbb{N}(0, 1)`` or the Radamaecher distribution (random ``\pm 1``) [@Avron]. However, matrix probing with these vectors has fairly low convergence rate and requires large number of probing vectors (``N >> 1``). To improve the estimate, [@hutchpp] proposed to compute a QR decomposition of the range of the matrix to be probed ``\mathbf{Z} = QR(\mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top S)`` with ``S`` an ``n_t \times N`` matrix of ``± 1``. In theory, this QR factorization greatly improves the estimation. However, computing a QR factorization for each subsurface point would be unfeasible. As a proxy for the outer product of the wavefields, we compute a single probing matrix for the entire subsurface based on the observed data ``Z = QR(\mathbf{d}_{obs}\mathbf{d}_{obs}^\top S)`` since the data is the restriction of a wavefield.
 
 We show what the probing vectors look like on Figure #pvec. It is of importance that these vectors are orthonormal but do not form a basis. They satisfy ``\mathbf{Z} \mathbf{Z}^\top = I`` but ``\mathbf{Z}^top \mathbf{Z} \neq I`` is a low rank approximation of ``\mathbf{d}_{obs} \mathbf{d}_{obs}^\top`` as shown on Figure #pvec\. This sets our method apart from transform domain methods such as on-the-fly DFT that can be interpreted as probing methods where the probing vectors are a subset of the Fourier basis.
 
@@ -135,7 +138,7 @@ We illustrate our method on the 2D overthrust model and compare our inversion re
 ![](./figures/init.png){width=100%}
 : True (top) and initial (bottom) velocity models for inversion.
 
-In all the experiments presented here, we ran 20 iteration of spectral projected gradient (gradient descent with box constraints) [@minconf] with 20 randomly selected shots per iteration [felix ref].
+In all the experiments presented here, we ran 20 iteration of spectral projected gradient (gradient descent with box constraints) [@mlr-v5-schmidt09a] with 20 randomly selected shots per iteration [@Aravkin11TRridr].
 
 
 #### Figure: {#2d-fwi-dft}
