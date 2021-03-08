@@ -1,4 +1,0 @@
-#!/bin/bash
-
-PATH=/usr/local/anaconda3/condabin:/Library/Frameworks/Python.framework/Versions/3.8/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/TeX/texbin:/opt/X11/bin:/Users/mathiaslouboutin/research/London/CodeGen/azurehpc/bin:/usr/local/opt/llvm@8/bin:/opt/local/bin:/opt/local/sbin:/Users/mathiaslouboutin/google-cloud-sdk/bin:/opt/intel/compilers_and_libraries_2019.5.281/mac/bin/intel64:/opt/intel/compilers_and_libraries_2019.5.281/mac/bin:/opt/intel//debugger_2019/gdb/intel64/bin:/Users/mathiaslouboutin/SeisUnix/bin:/opt/SLIM/ScholarlyMarkdown/bin
-scholdoc --template="/opt/SLIM/ScholarlyMarkdown/templates/SEGabstractTemplate.latex" --to=latex --natbib "louboutinp.md" -o "louboutinp.tex" 2>&1 && rm -f "louboutinp.pdf" ; TEXINPUTS=".:/opt/SLIM/ScholarlyMarkdown/texinputs//:" BSTINPUTS=".:/opt/SLIM/ScholarlyMarkdown/texinputs//:" latexmk -pdf -halt-on-error -interaction=batchmode -recorder -outdir="louboutinp_latexmk_temp" "louboutinp.tex"

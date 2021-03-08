@@ -105,14 +105,14 @@ function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Int
     d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, modelPy=modelPy)
     residual = d0 - dobs
     ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
-    return .5*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
+    return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end
 
 # LSRTM
 function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm, ps; options=Options(), nlind=false)
     # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
     p = default_worker_pool()
-    results = pmap(j -> lsrtm_objective_ps(model, q[j], dObs[j], dm, ps; options=subsample(options, j), nlind=nlind), p, 1:dObs.nsrc)
+    results = pmap(j -> lsrtm_objective_ps(model, source[j], dObs[j], dm, ps; options=subsample(options, j), nlind=nlind), p, 1:dObs.nsrc)
     # Collect and reduce gradients
     objective = 0f0
     gradient = PhysicalParameter(zeros(Float32, model.n), model.d, model.o)
@@ -130,5 +130,5 @@ function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, p
     dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
     ev = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
-    return .5*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
+    return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end

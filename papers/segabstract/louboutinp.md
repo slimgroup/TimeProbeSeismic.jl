@@ -10,7 +10,7 @@ bibliography:
 
 ## Summary
 
-{>> Redo all figures as individual ones with subfigures and captions in markown<<}
+blabla
 
 ## Introduction
 
@@ -38,19 +38,19 @@ where ``\mathbf{m}`` is the physical model parameter (squared slowness in the is
 In the isotropic acoustic approximation of the physics, the gradient of the data misfit objective function #adj is defined as [@haber10tremp]:
 
 ```math {#iccc}
-\mathcal{I} = \sum_t \frac{d^2 \mathbf{u}}{dt^2}(t) \mathbf{v}(t)
+\mathcal{I} = \sum_t \rho(\mathbf{u}(t)) \eta(\mathbf{v}(t))
 ```
 
-where ``\mathbf{u}, \mathbf{v}`` are the forward and adjoint wavefields solutions of the forward and adjoint wave equations. Following standard linear algebra, this zero-lag correlation over time can be rewritten as the trace of an outer product for each point ``\mathbf{x}`` in space as follows.
+where ``\mathbf{u}, \mathbf{v}`` are the forward and adjoint wavefields solutions of the forward and adjoint wave equations and ``\rho, \eta`` are the imaging conditions function. For example, in the isoropic acoustic case we have ``\rho(\mathbf{u}(t)) = \frac{d^2 \mathbf{u}}{dt^2}(t)`` and ``\eta(\mathbf{v}(t)) = \mathbf{v}(t)``. Following standard linear algebra, this zero-lag correlation over time can be rewritten as the trace of an outer product of the time trace of the wavefields for each point ``\mathbf{x}`` in space as follows.
 
 ```math {#optr}
-\mathcal{I}(\mathbf{x}) = \text{tr}(\mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top).
+\mathcal{I}(\mathbf{x}) = \text{tr}\left [ \rho(\mathbf{u}(\mathbf{x}))\eta(\mathbf{v}(\mathbf{x}))^\top\right ].
 ```
 
-This outer product is in practice not feasible to compute as each point in space requires an ``n_t x n_t`` matrix, with ``n_t`` the number of computational time steps. Computing this outer product woudl therefore require ``n_t`` more memory than standard FWI. To tackle this memory bottleneck, we instead compute this trace via matrix probing [@Avron, @hutcpp]. Matrix probing is a method that provides information about a matrix, in this case the trace, via matrix vector products when the matrix itself is either unknwn or too expensive to compute. The trace estimation of our outer product wrties as follows:
+This outer product is in practice not feasible to compute as each point in space requires an ``n_t x n_t`` matrix, with ``n_t`` the number of computational time steps. Computing this outer product woudl therefore require ``n_t`` more mem^\topory than standard FWI. To tackle this memory bottleneck, we instead compute this trace via matrix probing [@Avron, @hutchpp]. Matrix probing is a method that provides information about a matrix, in this case the trace, via matrix vector products when the matrix itself is either unknwn or too expensive to compute. The trace estimation of our outer product wrties as follows:
  
 ```math {#trpr}
-    \tilde{\mathcal{I}}(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^{N} \mathbf{z}_i^\top \mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top \mathbf{z}_i \\
+    \tilde{\mathcal{I}}(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^{N} \mathbf{z}_i^\top \rho(\mathbf{u}(\mathbf{x})) \eta(\mathbf{v}(\mathbf{x}))^\top \mathbf{z}_i \\
     \text{ s.t } \mathbb{E}(\mathbf{z}_i^\top \mathbf{z}_i) = 1, \mathbb{E}(\mathbf{z}_i) = 0,
 ```
 
@@ -62,8 +62,8 @@ or in its matrix form:
 
 where ``\mathbf{Z}`` is the matrix with each ``\mathbf{z}_i`` in its column. We will discuss the importance of the choice for these probing vectors ``\mathbf{z}_i`` in a subsequent section. This probing, unlike computing the trace, does not require to compute the outer product but only matrix vector products that can be made extremely memory scheduling the computation accross the forward and adjoint propagation. In the above Equation #trpr, that memory optimal schedule is:
 
-- 1. ``u_z = \mathbf{Z}^\top \mathbf{u}(\mathbf{x})``
-- 1. ``v_z = \mathbf{v}(\mathbf{x})^\top \mathbf{Z} ``
+- 1. ``u_z = \mathbf{Z}^\top \rho(\mathbf{u}(\mathbf{x}))``
+- 1. ``v_z = \eta(\mathbf{v}(\mathbf{x}))^\top \mathbf{Z} ``
 - 3. ``\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(u_z v_z)``.
 
 Through these three steps, we obtain the unbiased [@hutchpp] estimate of the true update ``\mathbb{E}(\tilde{\mathcal{I}}) = \mathcal{I}`` that only requires randomized accumulation of the wavefields during their respective propagation. These three memory-optimal steps can then be merged with the time-stepper to implement efficient on-the-fly matrix probing, summarized in algorithm #pic\.
@@ -71,10 +71,10 @@ Through these three steps, we obtain the unbiased [@hutchpp] estimate of the tru
 ### Algorithm: {#pic}
 | **for t=1:nt**
 | 1. ``\mathbf{u}(t+1) = f(\mathbf{u}(t), \mathbf{u}(t-1), \mathbf{m}, \mathbf{q})``
-| 2. ``u_z(\mathbf{x}) += \mathbf{Z}^\top \mathbf{u}(t, \mathbf{x})``
+| 2. ``u_z(\mathbf{x}) += \mathbf{Z}(t)^\top \rho(\mathbf{u}(t, \mathbf{x}))``
 | **for t=nt:1**
 | 1. ``\mathbf{v}(t-1) = f^\top(\mathbf{v}(t), \mathbf{v}(t+1), \mathbf{m}, \delta \mathbf{d})``
-| 2. ``v_z(\mathbf{x}) += \mathbf{v}(t, \mathbf{x})^\top \mathbf{Z}``
+| 2. ``v_z(\mathbf{x}) += \eta(\mathbf{v}(t, \mathbf{x}))^\top \mathbf{Z}(t)``
 | ``\tilde{\mathcal{I}}(\mathbf{x}) = \text{tr}(u_z v_z)``
 : Seismic inversion via probed trace estimation where ``f, f^\top`` are the forward and backward time-stepping operators.
 
@@ -107,20 +107,20 @@ It is worth noting that unlike the other methods in the table, boundary reconstr
 In some cases, such as reverse-time migration (RTM) or to add emphasis to a certain range of wavenumber for FWI, an imaging condtion may be applied to the forward and adjoint wavefield instead of using the standard adjoint state gradient. Examples ofthese imaging conditions are the inverse scattering imaging condition [@Whitmore, @witteisic] for RTM or wavefield separation [@Faqi] for FWI. Usually, these imaging condition can be expressed as linear operators that only act on the spatial dimension fo the wavefields. Because such operators are linear and independent of times, we can factor them out and directl apply them to the probed vectors rather than at every time steps. This property can be seen from rewriting Equation #trpr as:
 
 ```math {#trpr_t}
-    \tilde{\mathcal{I}}(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^{N} \left [ \sum_{t=1}^{n_t} (\mathbf{z}_i(t) \mathbf{u}(t, \mathbf{x})) \sum_{t=1}^{n_t}(\mathbf{v}(t, \mathbf{x}) \mathbf{z}_i(t)) \right ]
+    \tilde{\mathcal{I}}(\mathbf{x}) = \frac{1}{N} \sum_{i=1}^{N} \left [ \sum_{t=1}^{n_t} (\mathbf{z}_i(t) \rho(\mathbf{u}(t, \mathbf{x}))) \sum_{t=1}^{n_t}(\eta(\mathbf{v}(t, \mathbf{x})) \mathbf{z}_i(t)) \right ]
 ```
 
-and for any linear operators ``\mathbf{D}_u`` we have 
+and in the above mentioned case where ``\rho`` and ``eta`` are linear operator only acting over the spatial dimensions we have:
 
 ```math {#lint} 
-\sum_{t=1}^{n_t} \mathbf{z}_i(t) \mathbf{D}_u(\mathbf{u}(t, \mathbf{x})) = \mathbf{D}_u(\sum_{t=1}^{n_t} (\mathbf{z}_i(t) \mathbf{u}(t, \mathbf{x}))).
+\sum_{t=1}^{n_t} \mathbf{z}_i(t) \rho(\mathbf{u}(t, \mathbf{x})) = \rho \left (\sum_{t=1}^{n_t} \mathbf{z}_i(t) \mathbf{u}(t, \mathbf{x}) \right ).
 ```
 
 This property makes our probing method extremely advantageous as these imaging operations can be as expensive as an extra PDE if applied at every time steps while we only need to apply them ``\mathcal{O}(10)`` times.
 
 ### Probing vectors
 
-In order to make our method very efficient, the choice of probing vectors ``\mathbf{z}_i`` is crucial. In its most simple formulation, this matrix probing method only requires random vectors from the normal distribution ``\mathbf{z}_i \in \mathbb{N}(0, 1)`` or the Radamaecher distribution (random ``\pm 1``) [@Avron]. However, matrix probing with these vectors has fairly low convergence rate and requires large number of probing vectors (``N >> 1``). To improve the estimate, [@hutchpp] proposed to compute a QR decomposition of the range of the matrix to be probed ``\mathbf{Z} = QR(\mathbf{u}(\mathbf{x})\mathbf{v}(\mathbf{x})^\top S)`` with ``S`` an ``n_t \times N`` matrix of ``± 1``. In theory, this QR factorization greatly improves the estimation. However, computing a QR factorization for each subsurface point would be unfeasible. As a proxy for the outer product of the wavefields, we compute a single probing matrix for the entire subsurface based on the observed data ``Z = QR(\mathbf{d}_{obs}\mathbf{d}_{obs}^\top S)`` since the data is the restriction of a wavefield.
+In order to make our method very efficient, the choice of probing vectors ``\mathbf{z}_i`` is crucial. In its most simple formulation, this matrix probing method only requires random vectors from the normal distribution ``\mathbf{z}_i \in \mathbb{N}(0, 1)`` or the Radamaecher distribution (random ``\pm 1``) [@Avron]. However, matrix probing with these vectors has fairly low convergence rate and requires large number of probing vectors (``N >> 1``). To improve the estimate, [@hutchpp] proposed to compute a QR decomposition of the range of the matrix to be probed ``\mathbf{Z} = QR(\rho(\mathbf{u}(\mathbf{x})) \eta(\mathbf{v}(\mathbf{x}))^\top S)`` with ``S`` an ``n_t \times N`` matrix of ``± 1``. In theory, this QR factorization greatly improves the estimation. However, computing a QR factorization for each subsurface point would be unfeasible. As a proxy for the outer product of the wavefields, we compute a single probing matrix for the entire subsurface based on the observed data ``Z = QR(\mathbf{d}_{obs}\mathbf{d}_{obs}^\top S)`` since the data is the restriction of a wavefield.
 
 We show what the probing vectors look like on Figure #pvec. It is of importance that these vectors are orthonormal but do not form a basis. They satisfy ``\mathbf{Z} \mathbf{Z}^\top = I`` but ``\mathbf{Z}^\top \mathbf{Z} \neq I`` is a low rank approximation of ``\mathbf{d}_{obs} \mathbf{d}_{obs}^\top`` as shown on Figure #pvec\. This sets our method apart from transform domain methods such as on-the-fly DFT that can be interpreted as probing methods where the probing vectors are a subset of the Fourier basis.
 
@@ -135,7 +135,7 @@ We illustrate our method on the 2D overthrust model and compare our inversion re
 
 
 #### Figure: {#2d-setup}
-![](./figures/init.png){width=100%}
+![](./figures/Init.png){width=100%}
 : True (top) and initial (bottom) velocity models for inversion.
 
 In all the experiments presented here, we ran 20 iteration of spectral projected gradient (gradient descent with box constraints) [@schmidt09a] with 20 randomly selected shots per iteration [@Aravkin11TRridr]. We show the standard FWI inversion result for reference in both cases. We can clearly see on Figures #2d-fwi-probed that our probed gradient allows the inversion to carry towards a good result. As expected, for very few probing vectors, we do not converge since our approximation is too far from the true gradient, however, we start to obtain a result comparable to the true model with as few as 8 probing vectors and such result could ven be improved with some constraints or regularization. On the other hand, we can see on figure #2d-fwi-dft that for an equivalent memory cost, on-the-fly DFT fails to converge to an acceptable result for any number of frequencies, most likely due to the coherent artifact steming from the DFT. These results should however be improved by either a better choice of selected frequencies or by adding extra constraints and regularizations as well.
@@ -144,6 +144,7 @@ In all the experiments presented here, we ran 20 iteration of spectral projected
 #### Figure: {#2d-fwi-dft}
 ![](./figures/DFT_fwi.png){width=100%}
 : On-the-fly DFT FWI on the 2D overthrust model with varying number of frequencies.
+
 
 #### Figure: {#2d-fwi-probed}
 ![](./figures/probed_fwi.png){width=100%}
