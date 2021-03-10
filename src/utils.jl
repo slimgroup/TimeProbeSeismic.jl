@@ -13,3 +13,6 @@ function qr_data(d::Array{Float32,2}, ps::Integer; seed=nothing, ts=0)
 end
 
 simil(x, y) = dot(x, y)/(norm(x)*norm(y))
+
+
+_wsave(s, fig::Figure; dpi::Int=150) = fig.savefig(s, bbox_inches="tight", dpi=dpi)

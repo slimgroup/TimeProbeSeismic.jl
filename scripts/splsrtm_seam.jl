@@ -12,6 +12,8 @@ using DrWatson
 # Read model and set up background
 vp, rho, n, d, o = deserialize(datadir("models", "bin.jld"))
 
+@warn "Untested script"
+
 m = vp.^(-2)
 m0 = Float32.(imfilter(m, Kernel.gaussian(15)))
 rho0 = Float32.(imfilter(rho[:, :], Kernel.gaussian(15)))
@@ -67,7 +69,7 @@ z = zeros(Float32, info.n)
 
 batchsize = 8
 niter = 5
-ps = 32
+ps = 128
 fval = zeros(Float32, niter)
 tk = zeros(Float32, info.n)
 

@@ -77,13 +77,22 @@ sol = spg(x->objective_function(x, nothing), vec(m0), ProjBound, options)
 
 # Save results
 # wsave
-wsave(datadir("fwi_overthrust_basic", "fwi_std.bson"), typedict(sol))
+wsave(datadir("fwi_overthrust", "fwi_std.bson"), typedict(sol))
 
-# FWI with probing
-ps = 32
-global g_const = 0
-sol = spg(x->objective_function(x, ps), vec(m0), ProjBound, options)
+for i=1:8
+    ps = 2^i
+    # FWI with SPG
+    global g_const = 0
+    sol = spg(x->objective_function(x, ps), vec(m0), ProjBound, options)
 
-# Save results
-# wsave
-wsave(datadir("fwi_overthrust_basic", "fwi_ps$(ps).bson"), typedict(sol))
+    # Save results
+    # wsave
+    wsave(datadir("fwi_overthrust", "fwi_ps$(ps).bson"), typedict(sol))
+    # FWI with SPG
+    global g_const = 0
+    sol = spg(x->objective_function(x, ps; dft=true), vec(m0), ProjBound, options)
+
+    # Save results
+    # wsave
+    wsave(datadir("fwi_overthrust", "fwi_dft$(ps).bson"), typedict(sol))
+end
