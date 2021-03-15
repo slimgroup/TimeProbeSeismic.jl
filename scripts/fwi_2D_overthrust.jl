@@ -2,8 +2,9 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using DrWatson
-@quickactivate :TimeProbeSeismic
+using Distributed
+@everywhere using DrWatson
+@everywhere @quickactivate :TimeProbeSeismic
 
 # Load starting model
 ~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
