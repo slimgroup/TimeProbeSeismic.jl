@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/346371878.svg)](https://zenodo.org/badge/latestdoi/346371878)
+
 # TimeProbeSeismic
 
 ## DrWatson
