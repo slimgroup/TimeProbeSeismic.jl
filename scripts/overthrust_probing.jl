@@ -75,10 +75,12 @@ g[1] = J[1]'*residual[1]
 g[2] = J[2]'*residual[2]
 
 # Probe
+Jp = judiJacobian(F0, q, 2^1, dobs)
 ge = Array{Any}(undef, 8, 2)
 for ps=1:8
-    ge[ps, 1] = judiJacobian(F0[1], q[1], 2^ps, dobs[1])'*residual[1]
-    ge[ps, 2] = judiJacobian(F0[2], q[2], 2^ps, dobs[2])'*residual[2]
+    set_ps!(Jp, 2^ps)
+    ge[ps, 1] = Jp[1]'*residual[1]
+    ge[ps, 2] = Jp[2]'*residual[2]
 end
 
 for i=1:2
