@@ -143,3 +143,45 @@ xlabel("Iteration")
 ylabel("Normalized objective")
 
 wsave(plotsdir("fwi_overthrust", "convergence.png"), gcf())
+
+
+# FWI plot for SEG abstract
+figure(figsize=(12, 9))
+
+subplot(3,3,1)
+imshow(vp_t; plt_dict...)
+title("True")
+xlabel("X (km)")
+ylabel("Depth (km)")
+vlines(x=[t*d[1]/1000 for t=trinds], colors=:k, ymin=0, ymax=ee[3])
+
+subplot(3,3,2)
+imshow(vp_0; plt_dict...)
+title("Initial")
+xlabel("X (km)")
+ylabel("Depth (km)")
+
+subplot(3,3,3)
+imshow(vp_std; plt_dict...)
+title("FWI")
+xlabel("X (km)")
+ylabel("Depth (km)")
+
+for (j, ps)=zip([4,5,6], [4, 16, 64])
+    i = inds[ps]
+    subplot(3, 3, j)
+    imshow(vp_ps[i]; plt_dict...)
+    title("PFWI $(ps)")
+    xlabel("X (km)")
+    ylabel("Depth (km)")
+
+    subplot(3, 3, j+3)
+    imshow(vp_dft[i]; plt_dict...)
+    title("OTDFT $(ps)")
+    xlabel("X (km)")
+    ylabel("Depth (km)")
+end
+tight_layout()
+
+
+wsave(plotsdir("fwi_overthrust", "probed_vs_dft.png"), gcf())
