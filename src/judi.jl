@@ -35,15 +35,9 @@ end
 
 # Time modeling 
 function time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::UnitRange{Int64}, ps::Integer, dobs::judiVector, options)
-    p = default_worker_pool()
-
     # Process shots from source channel asynchronously
-    results = judipmap(j -> time_modeling(model, q[j], dat[j], ps, dobs[j], subsample(options, j)), p, srcnum)
-    argout1 = results[1]
-    for j=2:length(srcnum)
-        argout1 += results[j]
-    end
-    return argout1
+    results = judipmap(j -> time_modeling(model, q[j], dat[j], ps, dobs[j], subsample(options, j)), srcnum)
+    return sum(results)
 end
 
 
@@ -60,19 +54,13 @@ time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::Int64, ps::I
 function fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::Integer; options=Options())
     
     # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
-    p = default_worker_pool()
-    results = judipmap(j -> fwi_objective_ps(model, source[j], dObs[j], ps, subsample(options, j)), p, 1:dObs.nsrc)
+    results = judipmap(j -> fwi_objective_ps(model, source[j], dObs[j], ps, subsample(options, j)), 1:dObs.nsrc)
     
     # Collect and reduce gradients
-    objective = 0f0
-    gradient = PhysicalParameter(zeros(Float32, model.n), model.d, model.o)
+    obj, gradient = reduce((x, y) -> x .+ y, results)
 
-    for j=1:dObs.nsrc
-        gradient .+= results[j][2]
-        objective += results[j][1]
-    end
     # first value corresponds to function value, the rest to the gradient
-    return objective, gradient
+    return obj, gradient
 end
 
 
@@ -85,30 +73,33 @@ function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Int
 end
 
 # LSRTM
-function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm, ps; options=Options(), nlind=false)
+function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm, ps; options=Options(), nlind=false, no_residual=false)
     # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
-    p = default_worker_pool()
-    results = judipmap(j -> lsrtm_objective_ps(model, source[j], dObs[j], dm, ps; options=subsample(options, j), nlind=nlind), p, 1:dObs.nsrc)
-    # Collect and reduce gradients
-    objective = 0f0
-    gradient = PhysicalParameter(zeros(Float32, model.n), model.d, model.o)
+    lsrtm_func = no_residual ? lsrtm_objective_ps_nores : lsrtm_objective_ps
+    results = judipmap(j -> lsrtm_func(model, source[j], dObs[j], dm, ps; options=subsample(options, j), nlind=nlind), 1:dObs.nsrc)
 
-    for j=1:dObs.nsrc
-        gradient .+= results[j][2]
-        objective += results[j][1]
-    end
+    # Collect and reduce gradients
+    obj, gradient = reduce((x, y) -> x .+ y, results)
+
     # first value corresponds to function value, the rest to the gradient
-    return objective, gradient
+    return obj, gradient
 end
 
-function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer; options=Options(), nlind=false)
-    modelPy = devito_model(model, options)
+function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
+                            options=Options(), nlind=false)
+    modelPy = devito_model(model, options; dm=dm)
     dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
-    ev = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
+    ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
     return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end
 
+function lsrtm_objective_ps_nores(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
+                                  options=Options(), nlind=false)
+    modelPy = devito_model(model, options; dm=dm)
+    ge, dl = born_with_back(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
+    return .5f0*norm(dl - dobs)^2, PhysicalParameter(ge, model.d, model.o)
+end
 
 
 #########################
