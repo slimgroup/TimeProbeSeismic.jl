@@ -88,7 +88,7 @@ end
 function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
                             options=Options(), nlind=false)
     modelPy = devito_model(model, options; dm=dm)
-    dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
+    dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy, nlind=nlind)
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
     ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
     return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)

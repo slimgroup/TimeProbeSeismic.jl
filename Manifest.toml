@@ -82,9 +82,9 @@ version = "0.2.2"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "644c24cd6344348f1c645efab24b707088be526a"
+git-tree-sha1 = "7d4252faf7323f3c614c9a564a31f22c547995cc"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "0.9.34"
+version = "0.9.36"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -452,8 +452,8 @@ version = "0.21.1"
 
 [[JUDI]]
 deps = ["ArgParse", "DSP", "Dierckx", "Distributed", "FFTW", "JOLI", "LinearAlgebra", "Pkg", "Printf", "PyCall", "Reexport", "SegyIO", "Test"]
-git-tree-sha1 = "48008ba9b6b2ae84caec1fe405576e31ba08da8a"
-repo-rev = "pyload"
+git-tree-sha1 = "4318dfc4e61c78c217d7c261e36b86195b3e7d8a"
+repo-rev = "gpu"
 repo-url = "https://GitHub.com/slimgroup/JUDI.jl.git"
 uuid = "f3b833dc-6b2e-5b9c-b940-873ed6319979"
 version = "2.2.0"
