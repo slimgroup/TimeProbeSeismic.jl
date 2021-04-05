@@ -40,6 +40,7 @@ Mr = S*Tm
 
 # Curevelet transform
 C0 = joCurvelet2D(model0.n[1], 2*model0.n[2]; zero_finest=false, DDT=Float32, RDT=Float32)
+
 function C_fwd(im, C, n)
     im = hcat(reshape(im, n), reshape(im, n)[:, end:-1:1])
     coeffs = C*vec(im)
