@@ -151,7 +151,7 @@ end
 
 function adjbornop(J::judiJacobianP, w)
     srcnum = 1:J.info.nsrc
-    return time_modeling(J.model, J.source, w, J.ps, J.dobs, J.options)
+    return time_modeling(J.model, J.source, w, srcnum, J.ps, J.dobs, J.options)
 end
 
 function bornop(J::judiJacobianP, v)
