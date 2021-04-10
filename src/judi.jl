@@ -41,7 +41,14 @@ function time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::Uni
 end
 
 
-function time_modeling(model::Model, q::judiVector, residual::judiVector, ps::Integer, dobs::judiVector, options)
+function time_modeling(model_full::Model, q::judiVector, residual::judiVector, ps::Integer, dobs::judiVector, options)
+    # limit model to area with sources/receivers
+    if options.limit_m == true
+        model = deepcopy(model_full)
+        model, dm = limit_model_to_receiver_area(srcGeometry, recGeometry, model, options.buffer_size; pert=dm)
+    else
+        model = model_full
+    end
     modelPy = devito_model(model, options)
     d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, modelPy=modelPy)
     ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
@@ -64,7 +71,13 @@ function fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::I
 end
 
 
-function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
+function fwi_objective_ps(model_full::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
+    if options.limit_m == true
+        model = deepcopy(model_full)
+        model, dm = limit_model_to_receiver_area(srcGeometry, recGeometry, model, options.buffer_size; pert=dm)
+    else
+        model = model_full
+    end
     modelPy = devito_model(model, options)
     d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, modelPy=modelPy)
     residual = d0 - dobs
@@ -85,8 +98,14 @@ function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm,
     return obj, gradient
 end
 
-function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
+function lsrtm_objective_ps(model_full::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
                             options=Options(), nlind=false)
+    if options.limit_m == true
+        model = deepcopy(model_full)
+        model, dm = limit_model_to_receiver_area(srcGeometry, recGeometry, model, options.buffer_size; pert=dm)
+    else
+        model = model_full
+    end
     modelPy = devito_model(model, options; dm=dm)
     dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
@@ -94,8 +113,14 @@ function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, p
     return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end
 
-function lsrtm_objective_ps_nores(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
+function lsrtm_objective_ps_nores(model_full::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
                                   options=Options(), nlind=false)
+    if options.limit_m == true
+        model = deepcopy(model_full)
+        model, dm = limit_model_to_receiver_area(srcGeometry, recGeometry, model, options.buffer_size; pert=dm)
+    else
+        model = model_full
+    end
     modelPy = devito_model(model, options; dm=dm)
     ge, dl = born_with_back(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
     return .5f0*norm(dl - dobs)^2, PhysicalParameter(ge, model.d, model.o)
