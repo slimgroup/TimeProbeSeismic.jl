@@ -33,6 +33,16 @@ function get_pad(model::Model)
     return modelPy.padsizes
 end
 
+function get_model(src_geom::Geometry, rec_geom::Geometry, model::Model, options::Options)
+    ~options.limit_m && return model
+    return limit_model_to_receiver_area(src_geom, rec_geom, deepcopy(model), options.buffer_size)[1]
+end
+
+function get_model(src_geom::Geometry, rec_geom::Geometry, model::Model, options::Options, dm)
+    ~options.limit_m && return (model, dm)
+    return limit_model_to_receiver_area(src_geom, rec_geom, deepcopy(model), options.buffer_size; pert=dm)
+end
+
 # Time modeling 
 function time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::UnitRange{Int64}, ps::Integer, dobs::judiVector, options)
     # Process shots from source channel asynchronously
@@ -42,9 +52,11 @@ end
 
 
 function time_modeling(model::Model, q::judiVector, residual::judiVector, ps::Integer, dobs::judiVector, options)
-    modelPy = devito_model(model, options)
-    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, modelPy=modelPy)
-    ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
+    model_loc = get_model(q.geometry, residual.geometry, model, options)
+    modelPy = devito_model(model_loc, options)
+    d0, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
+    ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
+    options.limit_m && (ge = extend_gradient(model, model_loc, ge))
     return PhysicalParameter(ge, model.d, model.o)
 end
 
@@ -65,10 +77,12 @@ end
 
 
 function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
-    modelPy = devito_model(model, options)
-    d0, Q, eu = forward(model, q, dobs; ps=ps, options=options, modelPy=modelPy)
+    model_loc = get_model(q.geometry, dobs.geometry, model, options)
+    modelPy = devito_model(model_loc, options)
+    d0, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
     residual = d0 - dobs
-    ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
+    ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
+    options.limit_m && (ge = extend_gradient(model, model_loc, ge))
     return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end
 
@@ -87,17 +101,21 @@ end
 
 function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
                             options=Options(), nlind=false)
-    modelPy = devito_model(model, options; dm=dm)
-    dnl, dl, Q, eu = born(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
+    model_loc, dm = get_model(q.geometry, dobs.geometry, model, options, dm)
+    modelPy = devito_model(model_loc, options; dm=dm)
+    dnl, dl, Q, eu = born(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
-    ge = backprop(model, residual, Q, eu; options=options, modelPy=modelPy)
+    ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
+    options.limit_m && (ge = extend_gradient(model, model_loc, ge))
     return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end
 
 function lsrtm_objective_ps_nores(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
                                   options=Options(), nlind=false)
-    modelPy = devito_model(model, options; dm=dm)
-    ge, dl = born_with_back(model, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
+    model_loc, dm = get_model(q.geometry, dobs.geometry, model, options, dm)
+    modelPy = devito_model(model_loc, options; dm=dm)
+    ge, dl = born_with_back(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
+    options.limit_m && (ge = extend_gradient(model, model_loc, ge))
     return .5f0*norm(dl - dobs)^2, PhysicalParameter(ge, model.d, model.o)
 end
 
@@ -158,3 +176,7 @@ function bornop(J::judiJacobianP, v)
     srcnum = 1:J.info.nsrc
     return time_modeling(J.model, J.source.geometry, J.source.data, J.dobs.geometry, nothing, v, srcnum, 'J', 1, J.options)
 end
+
+
+###### JUDI fix to be moved there
+Base.similar(x::Array{T, N}, m::Model) where {T<:Real, N} = zeros(T, m.n)
