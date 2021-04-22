@@ -46,3 +46,20 @@ This repository contains a set of example scripts illustrating time probing for 
 This software is develloped as Georgia Institute of Technology as part of the ML4Seismic consortium. For questions or issues, please open an issue on github or contact the author:
 
 - Mathias Louboutin: mlouboutin3@gatech.edu
+
+# Cite us
+
+Please use the fllowing citation if you use our software
+
+```
+@unpublished {louboutin2021SEGulm,
+	title = {Ultra-low memory seismic inversion with randomized trace estimation},
+	year = {2021},
+	note = {Submitted to SEG 2021},
+	month = {04},
+	keywords = {FWI, HPC, inversion, randomized linear algebra},
+	url = {https://slim.gatech.edu/Publications/Public/Submitted/2021/louboutin2021SEGulm/louboutinp.html},
+	software = {https://github.com/slimgroup/TimeProbeSeismic.jl},
+	author = {Mathias Louboutin and Felix J. Herrmann}
+}
+```
