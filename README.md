@@ -49,7 +49,7 @@ This software is develloped as Georgia Institute of Technology as part of the ML
 
 # Cite us
 
-Please use the fllowing citation if you use our software
+Please use the following citation if you use our software:
 
 ```
 @unpublished {louboutin2021SEGulm,
