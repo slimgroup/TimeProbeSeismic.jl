@@ -2,35 +2,37 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-
 using DrWatson
 @quickactivate :TimeProbeSeismic
 
-# Load Sigsbee model
+# Download SEAM model and data
 ~isfile(datadir("models", "seam_model.bin")) && run(`curl -L https://www.dropbox.com/s/nyazel8g6ah4cld/seam_model.bin\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.bin"))`)
-~isfile(datadir("data", "seam_obn_data.bin"))&& run(`curl -L https://www.dropbox.com/s/ap2y4ny5n98kd5c/seam_obn_data.bin\?dl\=0 --create-dirs -o $(datadir("data", "seam_obn_data.bin"))`)
+~isfile(datadir("data", "seam_obn_1km.jld")) && run(`curl -L https://www.dropbox.com/s/6hzgel1itkuqb20/seam_obn_1km.jld\?dl\=0 --create-dirs -o $(datadir("data", "seam_obn_1km.jld"))`)
+
 # Read model and set up background
-vp, rho, n, d, o = deserialize(datadir("models", "bin.jld"))
+vp, rho, n, d, o = deserialize(datadir("models", "seam_model.bin"))
 
-@warn "Untested script"
-
-m = 1/vp
+m = vp.^(-2)
 m0 = Float32.(imfilter(m, Kernel.gaussian(15)))
-m0 = m0.^2
 rho0 = Float32.(imfilter(rho[:, :], Kernel.gaussian(15)))
-
-n = size(m0)
-d = (12.5, 10.)
+dm = m0 - m
 
 # Setup info and model structure
 model0 = Model(n, d, o, m0, rho=rho0; nb=40)
 
 # Load data
-dobs, q = deserialize(datadir("data", "seam_obn_data.bin"))
+@load datadir("data", "seam_obn_1km.jld") dobs q
+convgeom = x -> GeometryIC{Float32}([getfield(x.geometry, s) for s=fieldnames(GeometryIC)]...)
+convdata = x -> convert(Array{Array{Float32, 2}, 1}, x.data)
+conv_to_new_jv = x -> judiVector(convgeom(x), convdata(x))
+
+q = conv_to_new_jv(q)
+dobs = conv_to_new_jv(dobs)
 
 #################################################################################################
 
 opt = Options(isic=true, space_order=8)
+ps = 32
 
 # Right-hand preconditioners (model topmute)
 idx_wb = find_water_bottom(vp .- minimum(vp))
@@ -40,6 +42,7 @@ Mr = S*Tm
 
 # Curevelet transform
 C0 = joCurvelet2D(model0.n[1], 2*model0.n[2]; zero_finest=false, DDT=Float32, RDT=Float32)
+
 function C_fwd(im, C, n)
     im = hcat(reshape(im, n), reshape(im, n)[:, end:-1:1])
     coeffs = C*vec(im)
@@ -55,6 +58,13 @@ C = joLinearFunctionFwd_T(size(C0, 1), n[1]*n[2],
                           x -> C_fwd(x, C0, n),
                           b -> C_adj(b, C0, n),
                           Float32,Float32, name="Cmirrorext")
+
+function sample_indices(indlist, num_ind)
+    inds = unique(rand(indlist, num_ind))
+    samp = sort(indexin(inds, indlist))
+    deleteat!(indlist, samp)
+    return inds
+end
 
 # Setup random shot selection
 batchsize = 4
@@ -73,11 +83,14 @@ function breg_obj(x)
     end
     i = vcat(sample_indices(ind_left, batchsize), sample_indices(ind_right, batchsize))
     batchsize == 4  && (global batchsize = 2)
-    println("Iteration: $(j), imaging sources $(i)")
 
-    f, g = lsrtm_objective(model0, q[i], dobs[i], Mr*x, ps;optins=opt, nlind=true)
+    f, g = lsrtm_objective(model0, q[i], dobs[i], Mr*x, ps; options=opt, nlind=true)
     return f, Mr'*g
 end
 
-opt = bregman_options(maxIter=20, verbose=2, quantile=.95, alpha=1, antichatter=true, spg=true)
-sol = bregman(breg_obj, 0f0.*vec(m0), opt, C)
+# breg_opt = bregman_options(maxIter=5, verbose=2, quantile=.975, alpha=1, store_trace=true, antichatter=true, spg=true)
+# sol = bregman(breg_obj, 0f0.*vec(m0), breg_opt, C)
+
+# @save datadir("seam_rtm", "splsrtm.jld2") sol
+
+f, g = breg_obj(0f0.*vec(m0))

@@ -12,6 +12,8 @@ function time_resample_data(d::judiVector, dt_new)
     return time_resample_data(d.data[1], dt_new, d.geometry.dt[1], d.geometry.t[1])
 end
 
+time_resample_data(d::SeisCon, dt_new, dt_old, t) = time_resample_data(Float32.(d[1].data), dt_new, dt_old, t)
+
 function time_resample_data(d::Array, dt_new, dt_old, t)
     if dt_new == dt_old
         return d
@@ -52,6 +54,10 @@ end
 
 
 function time_modeling(model::Model, q::judiVector, residual::judiVector, ps::Integer, dobs::judiVector, options)
+    q.geometry = Geometry(q.geometry)
+    residual.geometry = Geometry(residual.geometry)
+    dobs.geometry = Geometry(dobs.geometry)
+
     model_loc = get_model(q.geometry, residual.geometry, model, options)
     modelPy = devito_model(model_loc, options)
     d0, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
@@ -63,7 +69,7 @@ end
 time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::Int64, ps::Integer, dobs::judiVector, options) = time_modeling(model, q, dat, ps, dobs, options)
 
 # FWI and lsrtm function
-function fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::Integer; options=Options())
+function JUDI.fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::Integer; options=Options())
     
     # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
     results = judipmap(j -> fwi_objective_ps(model, source[j], dObs[j], ps, subsample(options, j)), 1:dObs.nsrc)
@@ -77,6 +83,9 @@ end
 
 
 function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
+    q.geometry = Geometry(q.geometry)
+    dobs.geometry = Geometry(dobs.geometry)
+
     model_loc = get_model(q.geometry, dobs.geometry, model, options)
     modelPy = devito_model(model_loc, options)
     d0, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
@@ -101,6 +110,9 @@ end
 
 function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
                             options=Options(), nlind=false)
+    q.geometry = Geometry(q.geometry)
+    dobs.geometry = Geometry(dobs.geometry)
+
     model_loc, dm = get_model(q.geometry, dobs.geometry, model, options, dm)
     modelPy = devito_model(model_loc, options; dm=dm)
     dnl, dl, Q, eu = born(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
@@ -112,6 +124,9 @@ end
 
 function lsrtm_objective_ps_nores(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
                                   options=Options(), nlind=false)
+    q.geometry = Geometry(q.geometry)
+    dobs.geometry = Geometry(dobs.geometry)
+
     model_loc, dm = get_model(q.geometry, dobs.geometry, model, options, dm)
     modelPy = devito_model(model_loc, options; dm=dm)
     ge, dl = born_with_back(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
@@ -140,11 +155,11 @@ Base.getproperty(J::judiJacobianP, sym::Symbol) = sym == :recGeometry ? J.dobs.g
 
 set_ps!(J::judiJacobianP, ps::Integer) = (J.ps = ps)
 # Jacobian with probing
-function judiJacobian(F::judiPDEfull, source::judiVector, ps::Int64, dobs::judiVector; DDT::DataType=Float32, RDT::DataType=DDT, options=nothing)
+function JUDI.judiJacobian(F::judiPDEfull, source::judiVector, ps::Int64, dobs::judiVector; DDT::DataType=Float32, RDT::DataType=DDT, options=nothing)
     # JOLI wrapper for nonlinear forward modeling
     compareGeometry(F.srcGeometry, source.geometry) == true || judiJacobianException("Source geometry mismatch")
     (DDT == Float32 && RDT == Float32) || throw(judiJacobianException("Domain and range types not supported"))
-    m = typeof(F.recGeometry) == GeometryOOC ? sum(F.recGeometry.nsamples) : sum([length(F.recGeometry.xloc[j])*F.recGeometry.nt[j] for j=1:source.nsrc])
+    m = typeof(F.recGeometry) <: GeometryOOC ? sum(F.recGeometry.nsamples) : sum([length(F.recGeometry.xloc[j])*F.recGeometry.nt[j] for j=1:source.nsrc])
     n = F.info.n
 
     isnothing(options) && (options = F.options)
