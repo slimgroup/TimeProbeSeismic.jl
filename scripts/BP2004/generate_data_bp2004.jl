@@ -7,9 +7,9 @@
 
 # TO DO
 # Set up path where data will be saved
-data_path = "/data/mlouboutin3/BP2004/bp_observed/"
+data_path = "~/research/research-data/bpsalt/"
 
-using JUDI, SegyIO, JLD, PyPlot
+using JUDI, SegyIO, JLD, PyPlot, Images
 import JUDI: convgeom
 
 # Load velocity
@@ -33,10 +33,13 @@ geometry["src_geometry"] = convgeom(geometry["src_geometry"])
 geometry["rec_geometry"] = convgeom(geometry["rec_geometry"])
 
 # Set up model structure
-d = (6.25, 6.25)
+d = (10., 10.)
 o = (0., 0.)
 m0 = (1f0 ./ vp).^2
-n = size(m0)
+# n = size(m0)
+n = (6744, 1195)
+m0 = imresize(m0, n)
+rho = imresize(rho, n)
 model0 = Model(n, d, o, m0; rho=rho)
 
 # Load header geometry from original data set
@@ -57,13 +60,13 @@ info = Info(prod(model0.n), nsrc, ntComp)
 # Save data to disk
 opt = Options(limit_m = true,
               space_order = 16,
-              buffer_size = 4000f0,
-              save_data_to_disk = true,
-              file_path = data_path,
-              file_name = "bp_observed_data_")
+              buffer_size = 4000f0)#,
+            #   save_data_to_disk = true,
+            #   file_path = data_path,
+            #   file_name = "bp_observed_data_")
 
 # Setup operators
 F = judiModeling(info, model0, q.geometry, rec_geometry; options=opt)
 
 # Model data (write to disk)
-F*q
+dobs = F[10]*q[10]

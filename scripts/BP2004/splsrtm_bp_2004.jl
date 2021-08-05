@@ -5,7 +5,8 @@
 
 # TO DO
 # Set up path where data will be saved
-data_path = "/data/mlouboutin3/BP2004/bp_observed/"
+# data_path = "/data/mlouboutin3/BP2004/bp_observed/"
+data_path = "/mnt/c/Users/mathi/Dropbox (GaTech)/BP_synthetic_2004/SynData/"
 
 using JUDI, SegyIO, JLD, PyPlot, JOLI, Random, LinearAlgebra, TimeProbeSeismic
 
@@ -43,7 +44,7 @@ q = judiVector(src_geometry, wavelet)
 ###################################################################################################
 
 # Set options
-opt = Options(limit_m = true, buffer_size = 3000f0, isic = true)
+opt = Options(limit_m=true, buffer_size=3000f0, isic=true)
 
 ps = 32
 # Setup operators
@@ -58,7 +59,7 @@ Mr = D*T
 # Linearized Bregman parameters
 x = zeros(Float32, prod(model0.n))
 z = zeros(Float32, prod(model0.n))
-batchsize = 50
+batchsize = 8
 niter = 1
 fval = zeros(Float32, niter)
 
@@ -74,7 +75,8 @@ for j=1:niter
     println("Iteration: ", j)
 
     # Select batch and set up left-hand preconditioner
-    i = randperm(d_obs.nsrc)[1:batchsize]
+    # i = randperm(d_obs.nsrc)[1:batchsize]
+    i = 500:500+batchsize
     d_sub = get_data(d_obs[i])
     Ml = judiMarineTopmute2D(35, d_sub.geometry)
 
