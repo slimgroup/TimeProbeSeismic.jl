@@ -137,6 +137,26 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true
     return pe, probing
 end
 
+
+function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}, model::PyObject; fw=true, isic=false, pe=nothing)
+    p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
+    s = fw ? wf[1].grid.time_dim.spacing : 1
+    # Probing vector
+    nt = size(e, 1)
+    q = dv.TimeFunction(name="Q", grid=wf[1].grid, dimensions=(wf[1].grid.time_dim, p_e),
+                        shape=(nt, size(e, 2)), time_order=0, initializer=e)
+    # Probed output
+    pe = dv.Function(name="$(wf[1].name)e", grid=wf[1].grid, dimensions=(wf[1].grid.dimensions..., p_e),
+                     shape=(wf[1].grid.shape..., size(e, 2)), space_order=wf[1].space_order)
+
+    if size(e, 2) < 17
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
+    else
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
+    end
+    return pe, probing
+end
+
 function time_probe_sim(e::Array{Float32, 2}, wfu::PyObject, wfv::PyObject,model::PyObject; isic=false)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = wfu.grid.time_dim.spacing
@@ -163,6 +183,11 @@ end
 function ic(wf::PyObject, fw::Bool, isic::Bool)
     return (isic || ~fw) ? wf : wf.dt2
 end
+
+function ic(wf::Tuple{PyCall.PyObject, PyCall.PyObject}, fw::Bool, isic::Bool)
+    return (isic || ~fw) ? (wf[1] + wf[2]) : (wf[1].dt2 + wf[2].dt2)
+end
+
 
 function combine(eu::PyObject, ev::PyObject, isic::Bool=false)
     g = dv.Function(name="ge", grid=eu.grid, space_order=0)
