@@ -121,6 +121,8 @@ end
 function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = fw ? wf.grid.time_dim.spacing : 1
+    fact = max(1, div(4, get_dt(model)))
+    tsub = dv.ConditionalDimension(name="tsub", parent=wf[1].grid.time_dim, factor=fact)
     # Probing vector
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(wf.grid.time_dim, p_e),
@@ -132,7 +134,7 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true
     if size(e, 2) < 17
         probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
     else
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic), implicit_dims=tsub)]
     end
     return pe, probing
 end
@@ -141,6 +143,8 @@ end
 function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}, model::PyObject; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = fw ? wf[1].grid.time_dim.spacing : 1
+    fact = max(1, div(4, get_dt(model)))
+    tsub = dv.ConditionalDimension(name="tsub", parent=wf[1].grid.time_dim, factor=fact)
     # Probing vector
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf[1].grid, dimensions=(wf[1].grid.time_dim, p_e),
@@ -152,7 +156,7 @@ function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyOb
     if size(e, 2) < 17
         probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
     else
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic), implicit_dims=tsub)]
     end
     return pe, probing
 end
