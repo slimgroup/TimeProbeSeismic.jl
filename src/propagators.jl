@@ -3,6 +3,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
                  wavelet::Array{Float32}, e::Array{Float32}, space_order::Integer=8, isic::Bool=false)
     # Number of time steps
     nt = size(wavelet, 1)
+    r = size(e, 2)
 
     # Setting forward wavefield
     u = wu.wavefield(model, space_order)
@@ -17,7 +18,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="forwardp", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
 
     summary = op()
 
@@ -30,6 +31,7 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
                  e::Array{Float32}, space_order::Integer=8)
     # Number of time steps
     nt = size(y, 1)
+    r = size(e, 2)
 
     # Setting adjoint wavefield
     v = wu.wavefield(model, space_order, fw=false)
@@ -44,7 +46,7 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="adjointp", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="adjointp$(r)", opt=ut.opt_op(model))
 
     # Run operator
     summary = op()
@@ -57,6 +59,7 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
               wavelet::Array{Float32}, e::Array{Float32}, space_order::Integer=8, isic::Bool=false)
     # Number of time steps
     nt = size(wavelet, 1)
+    r = size(e, 2)
 
     # Setting forward wavefield
     u = wu.wavefield(model, space_order)
@@ -75,7 +78,7 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     # Create operator and run
     subs = model.spacing_map
     op = dv.Operator(vcat(pde, pdel, probe_eq, geom_expr, geom_exprl), subs=subs,
-                     name="bornp", opt=ut.opt_op(model))
+                     name="bornp$(r)", opt=ut.opt_op(model))
 
     summary = op()
 
@@ -89,6 +92,7 @@ function born_with_back(model::PyObject, src_coords::Array{Float32}, rcv_coords:
                         space_order::Integer=8, isic::Bool=false)
     # Number of time steps
     nt = size(wavelet, 1)
+    r = size(e, 2)
 
     # Setting forward wavefield
     u = wu.wavefield(model, space_order)
@@ -110,7 +114,7 @@ function born_with_back(model::PyObject, src_coords::Array{Float32}, rcv_coords:
     # Create operator and run
     subs = model.spacing_map
     op = dv.Operator(vcat(pde, pdel, pdev, probe_eq, geom_expr, geom_exprl, geom_exprv),
-                     subs=subs, name="bornback", opt=ut.opt_op(model))
+                     subs=subs, name="bornbackp$(r)", opt=ut.opt_op(model))
 
     summary = op()
 
@@ -121,8 +125,6 @@ end
 function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = fw ? wf.grid.time_dim.spacing : 1
-    fact = max(1, div(4, get_dt(model)))
-    tsub = dv.ConditionalDimension(name="tsub", parent=wf[1].grid.time_dim, factor=fact)
     # Probing vector
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(wf.grid.time_dim, p_e),
@@ -134,7 +136,7 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true
     if size(e, 2) < 17
         probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
     else
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic), implicit_dims=tsub)]
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
     end
     return pe, probing
 end
@@ -143,8 +145,6 @@ end
 function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}, model::PyObject; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = fw ? wf[1].grid.time_dim.spacing : 1
-    fact = max(1, div(4, get_dt(model)))
-    tsub = dv.ConditionalDimension(name="tsub", parent=wf[1].grid.time_dim, factor=fact)
     # Probing vector
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf[1].grid, dimensions=(wf[1].grid.time_dim, p_e),
@@ -156,10 +156,11 @@ function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyOb
     if size(e, 2) < 17
         probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
     else
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic), implicit_dims=tsub)]
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
     end
     return pe, probing
 end
+
 
 function time_probe_sim(e::Array{Float32, 2}, wfu::PyObject, wfv::PyObject,model::PyObject; isic=false)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
