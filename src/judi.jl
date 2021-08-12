@@ -153,7 +153,9 @@ end
 
 Base.getproperty(J::judiJacobianP, sym::Symbol) = sym == :recGeometry ? J.dobs.geometry : getfield(J, sym)
 
+set_r!(J::judiJacobianP, ps::Integer) = (J.ps = ps)
 set_ps!(J::judiJacobianP, ps::Integer) = (J.ps = ps)
+
 # Jacobian with probing
 function JUDI.judiJacobian(F::judiPDEfull, source::judiVector, ps::Int64, dobs::judiVector; DDT::DataType=Float32, RDT::DataType=DDT, options=nothing)
     # JOLI wrapper for nonlinear forward modeling

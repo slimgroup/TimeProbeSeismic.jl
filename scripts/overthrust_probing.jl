@@ -77,34 +77,34 @@ g[2] = J[2]'*residual[2]
 # Probe
 Jp = judiJacobian(F0, q, 2^1, dobs)
 ge = Array{Any}(undef, 8, 2)
-for ps=1:8
-    set_ps!(Jp, 2^ps)
-    ge[ps, 1] = Jp[1]'*residual[1]
-    ge[ps, 2] = Jp[2]'*residual[2]
+for r=1:8
+    set_r!(Jp, 2^r)
+    ge[r, 1] = Jp[1]'*residual[1]
+    ge[r, 2] = Jp[2]'*residual[2]
 end
 
 for i=1:2
     clip = maximum(g[i])/10
-    figure()
+    figure(figsize=(12, 8))
     subplot(331)
     imshow(g[i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
     title("Reference")
-    for ps=1:8
-        subplot(3,3,ps+1)
-        imshow(ge[ps, i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
-        title("ps=$(2^ps)")
+    for r=1:8
+        subplot(3,3,r+1)
+        imshow(ge[r, i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
+        title("r=$(2^r)")
     end
     tight_layout()
     wsave(plotsdir("overthrust_single", "Probed_grad$i.png"), gcf())
 
-    figure()
+    figure(figsize=(12, 8))
     subplot(331)
     imshow(g[i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
     title("Reference")
-    for ps=1:8
-        subplot(3,3,ps+1)
-        imshow(g[i]' - ge[ps,i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
-        title("Difference ps=$(2^ps)")
+    for r=1:8
+        subplot(3,3,r+1)
+        imshow(g[i]' - ge[r,i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
+        title("Difference r=$(2^r)")
     end
     tight_layout()
     wsave(plotsdir("overthrust_single", "Probed_err$i.png"), gcf())
@@ -133,10 +133,10 @@ wsave(plotsdir("overthrust_single", "simil.png"), gcf())
 at = Array{Any}(undef, 8, 2)
 J0 = dot(δd, residual)
 for i=1:2
-    for ps=1:8
-        at[ps, i] = dot(ge[ps, i], dm)
-        @printf("ps=%d,  <J x, y> : %2.5e, <x, J' y> : %2.5e, relative error : %2.5e \n",
-                2^ps, J0, at[ps, i], (J0 - at[ps, i])/(J0 + at[ps, i]))
+    for r=1:8
+        at[r, i] = dot(ge[r, i], dm)
+        @printf("r=%d,  <J x, y> : %2.5e, <x, J' y> : %2.5e, relative error : %2.5e \n",
+                2^r, J0, at[r, i], (J0 - at[r, i])/(J0 + at[r, i]))
     end
 end
 
@@ -154,15 +154,15 @@ figure();imshow(dobs.data[1]*dobs.data[1]', cmap="seismic", vmin=-10, vmax=10)
 title(L"$d_{obs} d_{obs}^\top$")
 
 figure()
-for ps=1:3:7
-    subplot(3,3,ps)
-    Q = qr_data(dobs.data[1], 2^(ps+2))
+for r=1:3:7
+    subplot(3,3,r)
+    Q = qr_data(dobs.data[1], 2^(r+2))
     imshow(Q, vmin=-.1, vmax=.1, cmap="seismic", aspect="auto", interpolation="none")
-    title(L"$\mathbf{Z}$ "*"ps=$(2^ps)")
-    subplot(3, 3, ps+1)
+    title(L"$\mathbf{Z}$ "*"r=$(2^r)")
+    subplot(3, 3, r+1)
     imshow(Q'*Q,vmin=-1e-2, vmax=1e-2, cmap="seismic", aspect="auto")
     title(L"$\mathbf{Z}^\top \mathbf{Z}$")
-    subplot(3, 3, ps+2)
+    subplot(3, 3, r+2)
     imshow(Q*Q',vmin=-1e-2, vmax=1e-2, cmap="seismic", aspect="auto")
     title(L"$\mathbf{Z}\mathbf{Z}^\top$")
 end

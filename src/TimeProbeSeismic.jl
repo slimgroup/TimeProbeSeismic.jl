@@ -9,7 +9,7 @@ using Distributed
 @reexport using SlimOptim, PyPlot, JOLI, Printf, Random, Statistics
 
 export h5read, forward, backprop, smooth, combine_probes, simil
-export typedict, set_ps!
+export typedict, set_r!, set_ps!
 
 # Overloaded functions import
 import JUDI: judiJacobian, adjbornop, bornop, judiAbstractJacobian, judipmap, subsample
