@@ -10,7 +10,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, u)
-    eu, probe_eq = time_probe(e, u, model; isic=isic)
+    eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
     geom_expr, _, rcv = geom.src_rec(model, u, src_coords=src_coords, nt=nt,
@@ -28,7 +28,7 @@ end
 
 
 function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32},
-                 e::Array{Float32}, space_order::Integer=8)
+                  e::Array{Float32}, space_order::Integer=8)
     # Number of time steps
     nt = size(y, 1)
     r = size(e, 2)
@@ -38,7 +38,7 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
 
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, v, fw=false)
-    ev, probe_eq = time_probe(e, v, model; fw=false)
+    ev, probe_eq = time_probe(e, v; fw=false)
 
     # Setup source and receiver
     geom_expr, _, _ = geom.src_rec(model, v, src_coords=rcv_coords, nt=nt,
@@ -68,7 +68,7 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, u)
     pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic))
-    eu, probe_eq = time_probe(e, u, model; isic=isic)
+    eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
     geom_expr, _, rcv = geom.src_rec(model, u, src_coords=src_coords, nt=nt,
@@ -103,7 +103,7 @@ function born_with_back(model::PyObject, src_coords::Array{Float32}, rcv_coords:
     pde = ker.wave_kernel(model, u)
     pdev = ker.wave_kernel(model, v)
     pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic))
-    eu, ev, probe_eq = time_probe_sim(e, u, v, model; isic=isic)
+    eu, ev, probe_eq = time_probe_sim(e, u, v; isic=isic)
 
     # Setup source and receiver
     geom_expr, _, rcv = geom.src_rec(model, u, src_coords=src_coords, nt=nt,
@@ -122,7 +122,7 @@ function born_with_back(model::PyObject, src_coords::Array{Float32}, rcv_coords:
     return rcvl.data, eu, ev, summary
 end
 
-function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true, isic=false, pe=nothing)
+function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = fw ? wf.grid.time_dim.spacing : 1
     # Probing vector
@@ -142,7 +142,7 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject, model::PyObject; fw=true
 end
 
 
-function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}, model::PyObject; fw=true, isic=false, pe=nothing)
+function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = fw ? wf[1].grid.time_dim.spacing : 1
     # Probing vector
@@ -161,8 +161,7 @@ function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyOb
     return pe, probing
 end
 
-
-function time_probe_sim(e::Array{Float32, 2}, wfu::PyObject, wfv::PyObject,model::PyObject; isic=false)
+function time_probe_sim(e::Array{Float32, 2}, wfu::PyObject, wfv::PyObject; isic=false)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
     s = wfu.grid.time_dim.spacing
     # Probing vector

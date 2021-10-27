@@ -72,7 +72,7 @@ time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::Int64, ps::I
 function JUDI.fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::Integer; options=Options())
     
     # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
-    results = judipmap(j -> fwi_objective_ps(model, source[j], dObs[j], ps, subsample(options, j)), 1:dObs.nsrc)
+    results = map(j -> fwi_objective_ps(model, source[j], dObs[j], ps, subsample(options, j)), 1:dObs.nsrc)
     
     # Collect and reduce gradients
     obj, gradient = reduce((x, y) -> x .+ y, results)
@@ -83,16 +83,21 @@ end
 
 
 function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
+    dobs = get_data(dobs)
+    normalize!(dobs)
     q.geometry = Geometry(q.geometry)
     dobs.geometry = Geometry(dobs.geometry)
 
     model_loc = get_model(q.geometry, dobs.geometry, model, options)
     modelPy = devito_model(model_loc, options)
     d0, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
+    normalize!(d0)
     residual = d0 - dobs
     ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
-    return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
+
+    obj = loss(d0, residual)
+    return obj, PhysicalParameter(ge, model.d, model.o)
 end
 
 # LSRTM

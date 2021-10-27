@@ -16,3 +16,22 @@ simil(x, y) = dot(x, y)/(norm(x)*norm(y))
 
 
 _wsave(s, fig::Figure; dpi::Int=150) = fig.savefig(s, bbox_inches="tight", dpi=dpi)
+
+
+function normalize!(d::judiVector)
+    for i=1:d.nsrc
+        d.data[i] ./= mapslices(norm, d.data[i], dims=1)
+    end
+end
+
+normalize(d::Vector) = d / norm(d)
+
+function loss(d0::judiVector, d1::judiVector)
+    loss = 0
+    for i=1:d0.nsrc
+        for r=1:size(d0.data[i], 2)
+            loss += dot(d0.data[i][:, r], normalize(d0.data[i][:, r]) - normalize(d1.data[i][:, r]))
+        end
+    end
+    loss
+end
