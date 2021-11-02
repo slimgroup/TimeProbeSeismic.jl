@@ -18,7 +18,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
 
     summary = op()
 
@@ -46,7 +46,7 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="adjointp$(r)", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="adjointp$(r)", opt=ut.opt_op(model))
 
     # Run operator
     summary = op()
