@@ -18,7 +18,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
 
     summary = op()
 
@@ -46,7 +46,7 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, probe_eq, geom_expr), subs=subs, name="adjointp$(r)", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="adjointp$(r)", opt=ut.opt_op(model))
 
     # Run operator
     summary = op()
@@ -122,62 +122,67 @@ function born_with_back(model::PyObject, src_coords::Array{Float32}, rcv_coords:
     return rcvl.data, eu, ev, summary
 end
 
-function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=nothing)
-    p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
+function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false)
+    nt, r = size(e)
+    p_e = dv.DefaultDimension(name="p_e", default_value=r)
     s = fw ? wf.grid.time_dim.spacing : 1
+    # Oversampled in time so subsample probing
+    indst = rand(0:(r-1), nt)
+    Tind = dv.TimeFunction(name="t_probe", grid=wf.grid, dimensions=(wf.grid.time_dim,),
+                           shape=(nt,), dtype=np.int32, initializer=indst)
     # Probing vector
-    nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(wf.grid.time_dim, p_e),
-                        shape=(nt, size(e, 2)), time_order=0, initializer=e)
+                        shape=(nt, r), time_order=0, initializer=e)
     # Probed output
     pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
-                     shape=(wf.grid.shape..., size(e, 2)), space_order=wf.space_order)
+                     shape=(wf.grid.shape..., r), space_order=wf.space_order)
 
-    if size(e, 2) < 17
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
+    if r < 17
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:r]
     else
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
+        probing = [dv.Inc(pe._subs(p_e, Tind), s*q*ic(wf, fw, isic))]
     end
     return pe, probing
 end
 
 
-function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}; fw=true, isic=false, pe=nothing)
-    p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
+function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}; fw=true, isic=false)
+    nt, r = size(e)
+    p_e = dv.DefaultDimension(name="p_e", default_value=r)
     s = fw ? wf[1].grid.time_dim.spacing : 1
     # Probing vector
-    nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf[1].grid, dimensions=(wf[1].grid.time_dim, p_e),
-                        shape=(nt, size(e, 2)), time_order=0, initializer=e)
+                        shape=(nt, r), time_order=0, initializer=e)
     # Probed output
     pe = dv.Function(name="$(wf[1].name)e", grid=wf[1].grid, dimensions=(wf[1].grid.dimensions..., p_e),
-                     shape=(wf[1].grid.shape..., size(e, 2)), space_order=wf[1].space_order)
+                     shape=(wf[1].grid.shape..., r), space_order=wf[1].space_order)
 
-    if size(e, 2) < 17
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
+    if r < 17
+        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:r]
     else
         probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
     end
     return pe, probing
 end
 
+
 function time_probe_sim(e::Array{Float32, 2}, wfu::PyObject, wfv::PyObject; isic=false)
-    p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
+    nt, r = size(e)
+    p_e = dv.DefaultDimension(name="p_e", default_value=r)
     s = wfu.grid.time_dim.spacing
     # Probing vector
-    nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wfu.grid, dimensions=(wfu.grid.time_dim, p_e),
-                        shape=(nt, size(e, 2)), time_order=0, initializer=e)
+                        shape=(nt, r), time_order=0, initializer=e)
     q_r = q._subs(wfu.grid.time_dim, wfu.grid.time_dim.symbolic_max - wfu.grid.time_dim)
     # Probed output
     peu = dv.Function(name="$(wfu.name)e", grid=wfu.grid, dimensions=(wfu.grid.dimensions..., p_e),
-                      shape=(wfu.grid.shape..., size(e, 2)), space_order=wfu.space_order)
+                      shape=(wfu.grid.shape..., r), space_order=wfu.space_order)
     pev = dv.Function(name="$(wfv.name)e", grid=wfv.grid, dimensions=(wfv.grid.dimensions..., p_e),
-                      shape=(wfv.grid.shape..., size(e, 2)), space_order=wfv.space_order)
+                      shape=(wfv.grid.shape..., r), space_order=wfv.space_order)
 
-    if size(e, 2) < 17
-        probing = [dv.Inc(peu, s*q*ic(wfu, true, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
-        probing = vcat(probing, [dv.Inc(pev, s*q_r*ic(wfv, false, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)])
+    if r < 17
+        probing = [dv.Inc(peu, s*q*ic(wfu, true, isic)).xreplace(Dict(p_e => i)) for i=1:r]
+        probing = vcat(probing, [dv.Inc(pev, s*q_r*ic(wfv, false, isic)).xreplace(Dict(p_e => i)) for i=1:r])
     else
         probing = [dv.Inc(peu, s*q*ic(wfu, true, isic)), dv.Inc(pev, s*q_r*ic(wfv, false, isic))]
     end
@@ -195,8 +200,11 @@ end
 
 function combine(eu::PyObject, ev::PyObject, isic::Bool=false)
     g = dv.Function(name="ge", grid=eu.grid, space_order=0)
-    eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
+    eq = isic ? (eu * ev.laplace - si.inner_grad(eu, ev)) : eu * ev
     eq = eq.subs(ev.indices[end], eu.indices[end])
+    # Energy
+    E = dv.Function(name="eu", grid=eu.grid, space_order=0)
+    eqE = dv.Inc(E, eu*eu)
     op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
     op()
     g

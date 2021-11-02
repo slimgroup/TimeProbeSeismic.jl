@@ -22,6 +22,7 @@ const ker = PyNULL()
 const geom = PyNULL()
 const si = PyNULL()
 const ut = PyNULL()
+const np = PyNULL()
 
 function __init__()
     pushfirst!(PyVector(pyimport("sys")."path"), joinpath(JUDIPATH, "pysource"))
@@ -31,6 +32,7 @@ function __init__()
     copy!(geom, pyimport("geom_utils"))
     copy!(si, pyimport("sensitivity"))
     copy!(ut, pyimport("utils"))
+    copy!(np, pyimport("numpy"))
 end
 
 # Propagators

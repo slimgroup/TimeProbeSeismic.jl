@@ -3,14 +3,16 @@
 # Date: February 2021
 #
 
-using DrWatson
-@quickactivate :TimeProbeSeismic
+# using DrWatson
+# @quickactivate :TimeProbeSeismic
+using TimeProbeSeismic
 import TimeProbeSeismic: qr_data
 
 # Load starting model
 # Load starting model
-~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
-n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
+# ~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
+# n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
+n, d, o, m0, m = h5read("/home/mlouboutin3/.julia/dev/TimeProbeSeismic/data/models/overthrust_model.h5","n", "d", "o", "m0", "m")
 
 n = Tuple(n)
 o = Tuple(o)
@@ -70,14 +72,15 @@ residual = d0 - dobs
 δd = J*dm
 
 # gradient
+npv=5
 g = Array{Any}(undef, 2)
 g[1] = J[1]'*residual[1]
 g[2] = J[2]'*residual[2]
 
 # Probe
 Jp = judiJacobian(F0, q, 2^1, dobs)
-ge = Array{Any}(undef, 8, 2)
-for r=1:8
+ge = Array{Any}(undef, npv, 2)
+for r=1:npv
     set_r!(Jp, 2^r)
     ge[r, 1] = Jp[1]'*residual[1]
     ge[r, 2] = Jp[2]'*residual[2]
@@ -89,65 +92,67 @@ for i=1:2
     subplot(331)
     imshow(g[i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
     title("Reference")
-    for r=1:8
+    for r=1:npv
+        clip = maximum(ge[r, i])/10
         subplot(3,3,r+1)
         imshow(ge[r, i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
         title("r=$(2^r)")
     end
     tight_layout()
-    wsave(plotsdir("overthrust_single", "Probed_grad$i.png"), gcf())
+    # wsave(plotsdir("overthrust_single", "Probed_grad$i.png"), gcf())
 
     figure(figsize=(12, 8))
     subplot(331)
     imshow(g[i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
     title("Reference")
-    for r=1:8
+    for r=1:npv
+        clip = maximum(ge[r, i])/10
         subplot(3,3,r+1)
         imshow(g[i]' - ge[r,i]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
         title("Difference r=$(2^r)")
     end
     tight_layout()
-    wsave(plotsdir("overthrust_single", "Probed_err$i.png"), gcf())
+    # wsave(plotsdir("overthrust_single", "Probed_err$i.png"), gcf())
 end
 
 # Similarities
-similar = [simil(g[1], ge[i, 1]) for i=1:8]
-similar2 = [simil(g[2], ge[i, 2]) for i=1:8]
+similar = [simil(g[1], ge[i, 1]) for i=1:npv]
+similar2 = [simil(g[2], ge[i, 2]) for i=1:npv]
 # Similarities with muted wated
 mw(x::PhysicalParameter) = mw(x.data)
 mw(x::Array) = x[:, 19:end]
-similar1 = [simil(mw(g[1]), mw(ge[i, 1])) for i=1:8]
-similar12 = [simil(mw(g[2]), mw(ge[i, 2])) for i=1:8]
+similar1 = [simil(mw(g[1]), mw(ge[i, 1])) for i=1:npv]
+similar12 = [simil(mw(g[2]), mw(ge[i, 2])) for i=1:npv]
 
 figure()
-semilogx([2^i for i=1:8], similar, "-or", label="Full gradient turning", basex=2)
-semilogx([2^i for i=1:8], similar2, "-ob", label="Full gradient reflections", basex=2)
-semilogx([2^i for i=1:8], similar1, "-ob", label="Muted water layer turning", basex=2)
-semilogx([2^i for i=1:8], similar12, "-ob", label="Muted water layer reflections", basex=2)
+semilogx([2^i for i=1:npv], similar, "-or", label="Full gradient turning", basex=2)
+semilogx([2^i for i=1:npv], similar2, "-ob", label="Full gradient reflections", basex=2)
+semilogx([2^i for i=1:npv], similar1, "-ob", label="Muted water layer turning", basex=2)
+semilogx([2^i for i=1:npv], similar12, "-ob", label="Muted water layer reflections", basex=2)
 title(L"Similarity $\frac{<g, g_e>}{||g|| ||g_e||}$")
 xlabel("Number of probing vectors")
 legend()
-wsave(plotsdir("overthrust_single", "simil.png"), gcf())
+# wsave(plotsdir("overthrust_single", "simil.png"), gcf())
 
 # Adjoint test
-at = Array{Any}(undef, 8, 2)
+at = Array{Any}(undef, npv, 2)
 J0 = dot(δd, residual)
 for i=1:2
-    for r=1:8
+    for r=1:npv
         at[r, i] = dot(ge[r, i], dm)
         @printf("r=%d,  <J x, y> : %2.5e, <x, J' y> : %2.5e, relative error : %2.5e \n",
                 2^r, J0, at[r, i], (J0 - at[r, i])/(J0 + at[r, i]))
     end
 end
 
-att1 = [abs(1 - J0/at[i, 1]) for i=1:8]
-att2 = [abs(1 - J0/at[i, 2]) for i=1:8]
+att1 = [abs(1 - J0/at[i, 1]) for i=1:npv]
+att2 = [abs(1 - J0/at[i, 2]) for i=1:npv]
 figure()
-semilogx([2^i for i=1:8], att1, basex=2, label="Probed adjoint test")
-semilogx([2^i for i=1:8], att2, basex=2, label="Probed adjoint test reflections")
-semilogx([2^i for i=1:8], [0 for i=1:8], label="target")
+semilogx([2^i for i=1:npv], att1, basex=2, label="Probed adjoint test")
+semilogx([2^i for i=1:npv], att2, basex=2, label="Probed adjoint test reflections")
+semilogx([2^i for i=1:npv], [0 for i=1:npv], label="target")
 title(L"$1 - \frac{<J \delta m, g_e>}{<J' \delta d, \delta m>}$")
-wsave(plotsdir("overthrust_single", "adjtest.png"), gcf())
+# wsave(plotsdir("overthrust_single", "adjtest.png"), gcf())
 
 # Probing vectors
 figure();imshow(dobs.data[1]*dobs.data[1]', cmap="seismic", vmin=-10, vmax=10)
@@ -167,4 +172,4 @@ for r=1:3:7
     title(L"$\mathbf{Z}\mathbf{Z}^\top$")
 end
 tight_layout()
-wsave(plotsdir("overthrust_single", "Zi.png"), gcf())
+# wsave(plotsdir("overthrust_single", "Zi.png"), gcf())
