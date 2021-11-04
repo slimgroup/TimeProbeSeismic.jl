@@ -195,9 +195,12 @@ end
 
 function combine(eu::PyObject, ev::PyObject, isic::Bool=false)
     g = dv.Function(name="ge", grid=eu.grid, space_order=0)
+    E = dv.Function(name="Eu", grid=eu.grid, space_order=0)
     eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
     eq = eq.subs(ev.indices[end], eu.indices[end])
-    op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
+    eqE = dv.Inc(E, eu*eu)
+    op = dv.Operator([dv.Inc(g, -eq), eqE], subs=eu.grid.spacing_map)
     op()
+    dv.Operator(dv.Eq(g, g*g/(g*E+1e-6)))()
     g
 end

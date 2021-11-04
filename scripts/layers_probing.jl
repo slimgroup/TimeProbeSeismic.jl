@@ -2,8 +2,9 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using DrWatson
-@quickactivate :TimeProbeSeismic
+#using DrWatson
+#@quickactivate :TimeProbeSeismic
+using TimeProbeSeismic
 import TimeProbeSeismic: qr_data
 
 # Setup a 2 layers model
