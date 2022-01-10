@@ -1,19 +1,15 @@
 module TimeProbeSeismic
 
-using Reexport
 
 using PyCall
-using Distributed
+using Distributed, Reexport
+
 @reexport using LinearAlgebra, Images, HDF5, SegyIO, JOLI, JUDI, Serialization
 @reexport using JLD2
 @reexport using SlimOptim, PyPlot, JOLI, Printf, Random, Statistics
 
 export h5read, forward, backprop, smooth, combine_probes, simil
 export typedict, set_r!, set_ps!
-
-# Overloaded functions import
-import JUDI: judiJacobian, adjbornop, bornop, judiAbstractJacobian, judipmap, subsample
-import JUDI: time_modeling, fwi_objective, lsrtm_objective
 
 # python imports
 const dv = PyNULL()

@@ -1,3 +1,5 @@
+import JUDI: lsrtm_objective, time_modeling, fwi_objective
+import JUDI: judiJacobian, adjbornop, bornop, judiAbstractJacobian, subsample
 
 # Model smoother
 function smooth(m::Model; sigma=3)
@@ -46,14 +48,7 @@ function get_model(src_geom::Geometry, rec_geom::Geometry, model::Model, options
 end
 
 # Time modeling 
-function time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::UnitRange{Int64}, ps::Integer, dobs::judiVector, options)
-    # Process shots from source channel asynchronously
-    results = judipmap(j -> time_modeling(model, q[j], dat[j], ps, dobs[j], subsample(options, j)), srcnum)
-    return sum(results)
-end
-
-
-function time_modeling(model::Model, q::judiVector, residual::judiVector, ps::Integer, dobs::judiVector, options)
+function time_modeling(model::Model, q::judiVector, residual::judiVector, dobs::judiVector, options::Options, ps::Integer)
     q.geometry = Geometry(q.geometry)
     residual.geometry = Geometry(residual.geometry)
     dobs.geometry = Geometry(dobs.geometry)
@@ -66,23 +61,9 @@ function time_modeling(model::Model, q::judiVector, residual::judiVector, ps::In
     return PhysicalParameter(ge, model.d, model.o)
 end
 
-time_modeling(model::Model, q::judiVector, dat::judiVector, srcnum::Int64, ps::Integer, dobs::judiVector, options) = time_modeling(model, q, dat, ps, dobs, options)
-
 # FWI and lsrtm function
-function JUDI.fwi_objective(model::Model, source::judiVector, dObs::judiVector, ps::Integer; options=Options())
-    
-    # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
-    results = map(j -> fwi_objective_ps(model, source[j], dObs[j], ps, subsample(options, j)), 1:dObs.nsrc)
-    
-    # Collect and reduce gradients
-    obj, gradient = reduce((x, y) -> x .+ y, results)
 
-    # first value corresponds to function value, the rest to the gradient
-    return obj, gradient
-end
-
-
-function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Integer, options)
+function fwi_objective(model::Model, q::judiVector, dobs::judiVector, options::Options, ps::Integer)
     dobs = get_data(dobs)
     normalize!(dobs)
     q.geometry = Geometry(q.geometry)
@@ -101,20 +82,8 @@ function fwi_objective_ps(model::Model, q::judiVector, dobs::judiVector, ps::Int
 end
 
 # LSRTM
-function lsrtm_objective(model::Model, source::judiVector, dObs::judiVector, dm, ps; options=Options(), nlind=false, no_residual=false)
-    # fwi_objective function for multiple sources. The function distributes the sources and the input data amongst the available workers.
-    lsrtm_func = no_residual ? lsrtm_objective_ps_nores : lsrtm_objective_ps
-    results = judipmap(j -> lsrtm_func(model, source[j], dObs[j], dm, ps; options=subsample(options, j), nlind=nlind), 1:dObs.nsrc)
 
-    # Collect and reduce gradients
-    obj, gradient = reduce((x, y) -> x .+ y, results)
-
-    # first value corresponds to function value, the rest to the gradient
-    return obj, gradient
-end
-
-function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
-                            options=Options(), nlind=false)
+function lsrtm_objective(model::Model, q::judiVector, dobs::judiVector, dm::Union{Array, PhysicalParameter}, options::Options, nlind::Bool, ps::Integer)
     q.geometry = Geometry(q.geometry)
     dobs.geometry = Geometry(dobs.geometry)
 
@@ -126,19 +95,6 @@ function lsrtm_objective_ps(model::Model, q::judiVector, dobs::judiVector, dm, p
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
     return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
 end
-
-function lsrtm_objective_ps_nores(model::Model, q::judiVector, dobs::judiVector, dm, ps::Integer;
-                                  options=Options(), nlind=false)
-    q.geometry = Geometry(q.geometry)
-    dobs.geometry = Geometry(dobs.geometry)
-
-    model_loc, dm = get_model(q.geometry, dobs.geometry, model, options, dm)
-    modelPy = devito_model(model_loc, options; dm=dm)
-    ge, dl = born_with_back(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
-    options.limit_m && (ge = extend_gradient(model, model_loc, ge))
-    return .5f0*norm(dl - dobs)^2, PhysicalParameter(ge, model.d, model.o)
-end
-
 
 #########################
 
@@ -191,7 +147,7 @@ end
 
 function adjbornop(J::judiJacobianP, w)
     srcnum = 1:J.info.nsrc
-    return time_modeling(J.model, J.source, w, srcnum, J.ps, J.dobs, J.options)
+    return time_modeling(J.model, J.source, w, srcnum, J.dobs, J.options, J.ps)
 end
 
 function bornop(J::judiJacobianP, v)
