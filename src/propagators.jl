@@ -7,7 +7,8 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Setting forward wavefield
     u = wu.wavefield(model, space_order)
-
+    I = dv.Function(name="illum", grid=model.grid, space_order=0)
+    eqI = dv.Inc(I, sum(dv.tools.as_tuple(u))^2)
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, u)
     eu, probe_eq = time_probe(e, u; isic=isic)
@@ -18,12 +19,12 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, eqI, geom_expr, probe_eq), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
 
     summary = op()
 
     # Output
-    return rcv.data, eu, summary
+    return rcv.data, eu, I, summary
 end
 
 
@@ -63,6 +64,9 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
 
     # Setting forward wavefield
     u = wu.wavefield(model, space_order)
+    I = dv.Function(name="illum", grid=model.grid, space_order=0)
+    eqI = dv.Inc(I, sum(dv.tools.as_tuple(u))^2)
+
     ul = wu.wavefield(model, space_order, name="l")
 
     # Set up PDE expression and rearrange
@@ -77,13 +81,13 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, pdel, probe_eq, geom_expr, geom_exprl), subs=subs,
+    op = dv.Operator(vcat(pde, eqI, pdel, probe_eq, geom_expr, geom_exprl), subs=subs,
                      name="bornp$(r)", opt=ut.opt_op(model))
 
     summary = op()
 
     # Output
-    return rcv.data, rcvl.data, eu, summary
+    return rcv.data, rcvl.data, eu, I, summary
 end
 
 # Forward propagation

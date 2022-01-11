@@ -55,10 +55,11 @@ function time_modeling(model::Model, q::judiVector, residual::judiVector, dobs::
 
     model_loc = get_model(q.geometry, residual.geometry, model, options)
     modelPy = devito_model(model_loc, options)
-    d0, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
+    d0, Q, eu, I = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
     ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
-    return PhysicalParameter(ge, model.d, model.o)
+    options.limit_m && (I = extend_gradient(model, model_loc, I))
+    return PhysicalParameter(ge, model.d, model.o), PhysicalParameter(I, model.d, model.o)
 end
 
 # FWI and lsrtm function
@@ -71,14 +72,15 @@ function fwi_objective(model::Model, q::judiVector, dobs::judiVector, options::O
 
     model_loc = get_model(q.geometry, dobs.geometry, model, options)
     modelPy = devito_model(model_loc, options)
-    d0, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
+    d0, Q, eu, I = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
     normalize!(d0)
     residual = d0 - dobs
     ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
+    options.limit_m && (I = extend_gradient(model, model_loc, I))
 
     obj = loss(d0, residual)
-    return obj, PhysicalParameter(ge, model.d, model.o)
+    return obj, PhysicalParameter(ge, model.d, model.o), PhysicalParameter(I, model.d, model.o)
 end
 
 # LSRTM
@@ -89,11 +91,12 @@ function lsrtm_objective(model::Model, q::judiVector, dobs::judiVector, dm::Unio
 
     model_loc, dm = get_model(q.geometry, dobs.geometry, model, options, dm)
     modelPy = devito_model(model_loc, options; dm=dm)
-    dnl, dl, Q, eu = born(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
+    dnl, dl, Q, eu, I = born(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
     ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
-    return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
+    options.limit_m && (I = extend_gradient(model, model_loc, I))
+    return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o), PhysicalParameter(I, model.d, model.o)
 end
 
 #########################
@@ -147,7 +150,9 @@ end
 
 function adjbornop(J::judiJacobianP, w)
     srcnum = 1:J.info.nsrc
-    return time_modeling(J.model, J.source, w, srcnum, J.dobs, J.options, J.ps)
+    rtm, I = time_modeling(J.model, J.source, w, srcnum, J.dobs, J.options, J.ps)
+    J.model.params[:illum] = I
+    return rtm
 end
 
 function bornop(J::judiJacobianP, v)
