@@ -2,6 +2,10 @@
 
 # TimeProbeSeismic
 
+## Package
+
+This package can also be installed directly as a standard julia package with the `dev/add` command.
+
 ## DrWatson
 
 This code base is using the Julia Language and [DrWatson](https://juliadynamics.github.io/DrWatson.jl/stable/)
@@ -23,11 +27,6 @@ To (locally) reproduce this project, do the following:
 
 This will install all necessary packages for you to be able to run the scripts and
 everything should work out of the box.
-
-## Package
-
-This package can also be installed directly as a standard julia package with the `dev/add` command.
-
 
 ## Examples
 
