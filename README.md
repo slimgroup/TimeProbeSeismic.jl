@@ -52,14 +52,27 @@ This software is develloped as Georgia Institute of Technology as part of the ML
 Please use the following citation if you use our software:
 
 ```
-@unpublished {louboutin2021SEGulm,
-	title = {Ultra-low memory seismic inversion with randomized trace estimation},
-	year = {2021},
-	note = {Submitted to SEG 2021},
-	month = {04},
-	keywords = {FWI, HPC, inversion, randomized linear algebra},
-	url = {https://slim.gatech.edu/Publications/Public/Submitted/2021/louboutin2021SEGulm/louboutinp.html},
-	software = {https://github.com/slimgroup/TimeProbeSeismic.jl},
+@inbook{doi:10.1190/segam2021-3584072.1,
+author = {Mathias Louboutin and Felix J. Herrmann},
+title = {Ultra-low memory seismic inversion with randomized trace estimation},
+booktitle = {First International Meeting for Applied Geoscience \&amp; Energy Expanded Abstracts},
+chapter = {},
+pages = {787-791},
+year = {2021},
+doi = {10.1190/segam2021-3584072.1},
+URL = {https://library.seg.org/doi/abs/10.1190/segam2021-3584072.1},
+eprint = {https://library.seg.org/doi/pdf/10.1190/segam2021-3584072.1},
+}
+
+@conference {louboutin2022eageewi,
+	title = {Enabling wave-based inversion on GPUs with randomized trace estimation},
+	booktitle = {EAGE Annual Conference Proceedings},
+	year = {2022},
+	note = {(EAGE, madrid)},
+	month = {03},
+	pages = {Seismic Wave Modelling \& Least Square Migration 2 session},
+	keywords = {Image Volumes, inversion, RTM, SEAM, stochastic, TTI},
+	url = {https://slim.gatech.edu/Publications/Public/Conferences/EAGE/2022/louboutin2022eageewi/louboutinp.html},
 	author = {Mathias Louboutin and Felix J. Herrmann}
 }
 ```
