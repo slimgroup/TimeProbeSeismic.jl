@@ -9,7 +9,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
     u = wu.wavefield(model, space_order)
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, u, noillum=true)
+    pde = ker.wave_kernel(model, u)
     eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
@@ -37,7 +37,7 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
     v = wu.wavefield(model, space_order, fw=false)
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, v, fw=false, noillum=true)
+    pde = ker.wave_kernel(model, v, fw=false)
     ev, probe_eq = time_probe(e, v; fw=false)
 
     # Setup source and receiver
@@ -66,8 +66,8 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     ul = wu.wavefield(model, space_order, name="l")
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, u, noillum=true)
-    pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic), noillum=true)
+    pde = ker.wave_kernel(model, u)
+    pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic))
     eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
@@ -84,42 +84,6 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
 
     # Output
     return rcv.data, rcvl.data, eu, summary
-end
-
-# Forward propagation
-function born_with_back(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Float32},
-                        wavelet::Array{Float32}, e::Array{Float32}, y::Array{Float32, 2},
-                        space_order::Integer=8, isic::Bool=false)
-    # Number of time steps
-    nt = size(wavelet, 1)
-    r = size(e, 2)
-
-    # Setting forward wavefield
-    u = wu.wavefield(model, space_order)
-    ul = wu.wavefield(model, space_order, name="l")
-    v = wu.wavefield(model, space_order, name="b")
-
-    # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, u, noillum=true)
-    pdev = ker.wave_kernel(model, v, noillum=true)
-    pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic), noillum=true)
-    eu, ev, probe_eq = time_probe_sim(e, u, v; isic=isic)
-
-    # Setup source and receiver
-    geom_expr, _, rcv = geom.src_rec(model, u, src_coords=src_coords, nt=nt,
-                                     rec_coords=rcv_coords, wavelet=wavelet)
-    geom_exprl, _, rcvl = geom.src_rec(model, ul, rec_coords=rcv_coords, nt=nt)
-    geom_exprv, _, _ = geom.src_rec(model, v, src_coords=rcv_coords, nt=nt, wavelet=y)
-
-    # Create operator and run
-    subs = model.spacing_map
-    op = dv.Operator(vcat(pde, pdel, pdev, probe_eq, geom_expr, geom_exprl, geom_exprv),
-                     subs=subs, name="bornbackp$(r)", opt=ut.opt_op(model))
-
-    summary = op()
-
-    # Output
-    return rcvl.data, eu, ev, summary
 end
 
 function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=nothing)

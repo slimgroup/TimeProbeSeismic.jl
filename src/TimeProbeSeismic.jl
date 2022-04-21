@@ -1,11 +1,13 @@
 module TimeProbeSeismic
 
-using Reexport, Random, Statistics
+using Reexport, Random, Statistics, LinearAlgebra
 
 @reexport using JUDI
 using JUDI.PyCall
 
-import JUDI: judiAbstractJacobian, propagate, judiJacobian, judiMultiSourceVector, judiComposedPropagator, update!
+import JUDI: judiAbstractJacobian, propagate, judiJacobian, multi_src_fg
+import JUDI: time_resample, judiComposedPropagator, update!, fwi_objective, lsrtm_objective
+import JUDI: MTypes, Dtypes, judiMultiSourceVector
 import Base: adjoint, getindex
 
 export forward, backprop, smooth, combine_probes, simil

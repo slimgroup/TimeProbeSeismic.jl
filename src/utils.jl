@@ -12,29 +12,11 @@ end
 
 simil(x, y) = dot(x, y)/(norm(x)*norm(y))
 
-function normalize!(d::judiVector)
-    for i=1:d.nsrc
-        d.data[i] ./= mapslices(norm, d.data[i], dims=1)
-    end
-end
-
-normalize(d::Vector) = d / norm(d)
-
-function loss(d0::judiVector, d1::judiVector)
-    loss = 0
-    for i=1:d0.nsrc
-        for r=1:size(d0.data[i], 2)
-            loss += dot(d0.data[i][:, r], normalize(d0.data[i][:, r]) - normalize(d1.data[i][:, r]))
-        end
-    end
-    loss
-end
-
 # Model smoother
 function smooth(m::Model; sigma=3)
     nm = deepcopy(m)
-    inds = [sigma+1:ni-sigma for ni ∈ m.n]
-    for i ∈ CartesianIndices(tuple(inds...))
+    inds = [1:ni for ni ∈ m.n]
+    @inbounds for i ∈ CartesianIndices(tuple(inds...))
         s = CartesianIndex(max.(1, Tuple(i) .- sigma))
         e = CartesianIndex(min.(m.n, Tuple(i) .+ sigma))
         nm.m.data[i] = mean(m.m.data[s:e])
