@@ -9,7 +9,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
     u = wu.wavefield(model, space_order)
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, u)
+    pde = ker.wave_kernel(model, u, noillum=true)
     eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
@@ -37,7 +37,7 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
     v = wu.wavefield(model, space_order, fw=false)
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, v, fw=false)
+    pde = ker.wave_kernel(model, v, fw=false, noillum=true)
     ev, probe_eq = time_probe(e, v; fw=false)
 
     # Setup source and receiver
@@ -66,8 +66,8 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     ul = wu.wavefield(model, space_order, name="l")
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, u)
-    pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic))
+    pde = ker.wave_kernel(model, u, noillum=true)
+    pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic), noillum=true)
     eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
@@ -100,9 +100,9 @@ function born_with_back(model::PyObject, src_coords::Array{Float32}, rcv_coords:
     v = wu.wavefield(model, space_order, name="b")
 
     # Set up PDE expression and rearrange
-    pde = ker.wave_kernel(model, u)
-    pdev = ker.wave_kernel(model, v)
-    pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic))
+    pde = ker.wave_kernel(model, u, noillum=true)
+    pdev = ker.wave_kernel(model, v, noillum=true)
+    pdel = model.dm == 0 ? [] : ker.wave_kernel(model, ul, q=si.lin_src(model, u, isic=isic), noillum=true)
     eu, ev, probe_eq = time_probe_sim(e, u, v; isic=isic)
 
     # Setup source and receiver
@@ -124,10 +124,12 @@ end
 
 function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
-    s = fw ? wf.grid.time_dim.spacing : 1
+    # sub_time
+    t_sub = wf.grid.time_dim
+    s = fw ? t_sub.spacing : 1
     # Probing vector
     nt = size(e, 1)
-    q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(wf.grid.time_dim, p_e),
+    q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(t_sub, p_e),
                         shape=(nt, size(e, 2)), time_order=0, initializer=e)
     # Probed output
     pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
@@ -144,10 +146,12 @@ end
 
 function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}; fw=true, isic=false, pe=nothing)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
-    s = fw ? wf[1].grid.time_dim.spacing : 1
+    # sub_time
+    t_sub = wf[1].grid.time_dim
+    s = fw ? t_sub.spacing : 1
     # Probing vector
     nt = size(e, 1)
-    q = dv.TimeFunction(name="Q", grid=wf[1].grid, dimensions=(wf[1].grid.time_dim, p_e),
+    q = dv.TimeFunction(name="Q", grid=wf[1].grid, dimensions=(t_sub, p_e),
                         shape=(nt, size(e, 2)), time_order=0, initializer=e)
     # Probed output
     pe = dv.Function(name="$(wf[1].name)e", grid=wf[1].grid, dimensions=(wf[1].grid.dimensions..., p_e),
@@ -163,12 +167,14 @@ end
 
 function time_probe_sim(e::Array{Float32, 2}, wfu::PyObject, wfv::PyObject; isic=false)
     p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
-    s = wfu.grid.time_dim.spacing
+    # sub_time
+    t_sub = wf.grid.time_dim
+    s = t_sub.spacing
     # Probing vector
     nt = size(e, 1)
-    q = dv.TimeFunction(name="Q", grid=wfu.grid, dimensions=(wfu.grid.time_dim, p_e),
+    q = dv.TimeFunction(name="Q", grid=wfu.grid, dimensions=(t_sub, p_e),
                         shape=(nt, size(e, 2)), time_order=0, initializer=e)
-    q_r = q._subs(wfu.grid.time_dim, wfu.grid.time_dim.symbolic_max - wfu.grid.time_dim)
+    q_r = q._subs(t_sub, t_sub.symbolic_max - t_sub)
     # Probed output
     peu = dv.Function(name="$(wfu.name)e", grid=wfu.grid, dimensions=(wfu.grid.dimensions..., p_e),
                       shape=(wfu.grid.shape..., size(e, 2)), space_order=wfu.space_order)

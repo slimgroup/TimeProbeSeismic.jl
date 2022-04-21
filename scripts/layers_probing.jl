@@ -2,9 +2,9 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using DrWatson
-@quickactivate :TimeProbeSeismic
-import TimeProbeSeismic: qr_data
+# using DrWatson
+# @quickactivate :TimeProbeSeismic
+using TimeProbeSeismic
 
 # Setup a 2 layers model
 n = (101, 101)
@@ -49,7 +49,7 @@ wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
 # Forward operator
-opt = Options(space_order=16, sum_padding=true, isic=true)
+opt = Options(space_order=16, sum_padding=true, isic=false)
 F = judiModeling(model, srcGeometry, recGeometry; options=opt)
 F0 = judiModeling(model0, srcGeometry, recGeometry; options=opt)
 J = judiJacobian(F0, q)
