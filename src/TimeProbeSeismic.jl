@@ -11,7 +11,7 @@ import JUDI: MTypes, Dtypes, judiMultiSourceVector
 import Base: adjoint, getindex
 
 export forward, backprop, smooth, combine_probes, simil
-export typedict, qr_data
+export typedict, qr_data, datadir, plotsdir, wsave
 
 # python imports
 const dv = PyNULL()

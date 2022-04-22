@@ -33,3 +33,7 @@ function get_model(src_geom::Geometry, rec_geom::Geometry, model::Model, options
     ~options.limit_m && return (model, dm)
     return limit_model_to_receiver_area(src_geom, rec_geom, deepcopy(model), options.buffer_size; pert=dm)
 end
+
+datadir(s::Vararg{String, N}) where N = jointpath([dirname(pathof(TimeProbeSeismic)),"/../data/", s...])
+plotsdir(s::Vararg{String, N}) where N = jointpath([dirname(pathof(TimeProbeSeismic)),"/../plots/", s...])
+wsave(s, fig::Figure; dpi::Int=150, kw...) = fig.savefig(s, bbox_inches="tight", dpi=dpi, kw...)

@@ -3,8 +3,7 @@
 # Date: February 2021
 #
 
-using DrWatson
-@quickactivate :TimeProbeSeismic
+using TimeProbeSeismic, Serialization, PyPlot
 
 # Load Sigsbee model
 ~isfile(datadir("models", "seam_model.bin")) && run(`curl -L https://www.dropbox.com/s/nyazel8g6ah4cld/seam_model.bin\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.bin"))`)
@@ -73,5 +72,5 @@ for ps=1:9
     Q = qr_data(dobs.data[1]*dobs.data[1]', 2^ps)
     imshow(Q, vmin=-.1, vmax=.1, cmap="seismic", aspect="auto")
     title("Probing vectors ps=$(2^ps)")
-end
+ends
 tight_layout()

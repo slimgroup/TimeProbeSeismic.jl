@@ -2,13 +2,11 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using Distributed
-@everywhere using DrWatson
-@everywhere @quickactivate :TimeProbeSeismic
+using TimeProbeSeismic, SegyIO, Random, SlimOptim, JLD2
 
 # Load starting model
 ~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
-n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
+n, d, o, m0, m = read(h5open(datadir("models", "overthrust_model.h5"), "r"), "n", "d", "o", "m0", "m")
 model0 = Model((n[1], n[2]), (d[1], d[2]), (o[1], o[2]), m0)
 
 # Bound constraints
@@ -56,9 +54,9 @@ function objective_function(x, ps; dft=false)
             frequencies[k] = select_frequencies(q_dist; fmin=0.003, fmax=0.02, nf=ps)
         end
         opt = Options(frequencies=frequencies)
-        f, g = JUDI.fwi_objective(model0, q[idx], d_obs[idx]; options=opt)
+        f, g = fwi_objective(model0, q[idx], d_obs[idx]; options=opt)
     elseif isnothing(ps)
-        f, g = JUDI.fwi_objective(model0, q[idx], d_obs[idx])
+        f, g = fwi_objective(model0, q[idx], d_obs[idx])
     else
         f, g = fwi_objective(model0, q[idx], d_obs[idx], ps)
     end
@@ -77,8 +75,7 @@ g_const = 0
 sol = spg(x->objective_function(x, nothing), vec(m0), ProjBound, options)
 
 # Save results
-# wsave
-wsave(datadir("fwi_overthrust_basic", "fwi_std.bson"), typedict(sol))
+@save datadir("fwi_overthrust_basic", "fwi_std.jld2") sol
 
 # FWI with probing
 ps = 32
@@ -87,4 +84,4 @@ sol = spg(x->objective_function(x, ps), vec(m0), ProjBound, options)
 
 # Save results
 # wsave
-wsave(datadir("fwi_overthrust_basic", "fwi_ps$(ps).bson"), typedict(sol))
+@save datadir("fwi_overthrust_basic", "fwi_ps$(ps).jld2") sol

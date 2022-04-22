@@ -4,21 +4,21 @@
 #
 
 using TimeProbeSeismic, PyPlot, LinearAlgebra, HDF5
-data_dir = dirname(pathof(TimeProbeSeismic))*"/../data/"
+
 # Load starting model
-# Load starting model
-~isfile("$(data_dir)/models/overthrust_model.h5") && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(data_dir)/models/overthrust_model.h5`)
-n, d, o, m0, m = read(h5open("$(data_dir)/models/overthrust_model.h5", "r"), "n", "d", "o", "m0", "m")
+~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
+n, d, o, m0, m = read(h5open(datadir("models", "overthrust_model.h5"), "r"), "n", "d", "o", "m0", "m")
 
 n = Tuple(n)
 o = Tuple(o)
 d = Tuple(d)
+m0[:, 20:end] = imfilter(m0[:, 20:end] ,Kernel.gaussian(5))
+dm = vec(m - m0)
 
 # Setup info and model structure
 nsrc = 2	# number of sources
 model = Model(n, d, o, m)
-model0 = smooth(model; sigma=5)
-dm = model0.m - model.m
+model0 = Model(n, d, o, m0)
 
 # Set up receiver geometry
 nxrec = n[1]
@@ -46,13 +46,17 @@ f0 = 0.010f0     # kHz
 wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
+# Set up info structure for linear operators
+ntComp = get_computational_nt(srcGeometry, recGeometry, model)
+info = Info(prod(n), nsrc, ntComp)
+
 ###################################################################################################
 # Write shots as segy files to disk
 opt = Options(space_order=16)
 
 # Setup operators
-F = judiModeling(model, srcGeometry, recGeometry; options=opt)
-F0 = judiModeling(model0, srcGeometry, recGeometry; options=opt)
+F = judiModeling(info, model, srcGeometry, recGeometry; options=opt)
+F0 = judiModeling(info, model0, srcGeometry, recGeometry; options=opt)
 J = judiJacobian(F0, q)
 
 # data
@@ -68,9 +72,10 @@ g[1] = J[1]'*residual[1]
 g[2] = J[2]'*residual[2]
 
 # Probe
+Jp = judiJacobian(F0, q, 2^1, dobs)
 ge = Array{Any}(undef, 8, 2)
 for r=1:8
-    Jp = judiJacobian(F0, q, 2^r, dobs)
+    set_r!(Jp, 2^r)
     ge[r, 1] = Jp[1]'*residual[1]
     ge[r, 2] = Jp[2]'*residual[2]
 end
@@ -87,6 +92,7 @@ for i=1:2
         title("r=$(2^r)")
     end
     tight_layout()
+    wsave(plotsdir("overthrust_single", "Probed_grad$i.png"), gcf())
 
     figure(figsize=(12, 8))
     subplot(331)
@@ -98,6 +104,7 @@ for i=1:2
         title("Difference r=$(2^r)")
     end
     tight_layout()
+    wsave(plotsdir("overthrust_single", "Probed_err$i.png"), gcf())
 end
 
 # Similarities
@@ -117,6 +124,7 @@ semilogx([2^i for i=1:8], similar12, "-ob", label="Muted water layer reflections
 title(L"Similarity $\frac{<g, g_e>}{||g|| ||g_e||}$")
 xlabel("Number of probing vectors")
 legend()
+wsave(plotsdir("overthrust_single", "simil.png"), gcf())
 
 # Adjoint test
 at = Array{Any}(undef, 8, 2)
@@ -136,6 +144,7 @@ semilogx([2^i for i=1:8], att1, basex=2, label="Probed adjoint test")
 semilogx([2^i for i=1:8], att2, basex=2, label="Probed adjoint test reflections")
 semilogx([2^i for i=1:8], [0 for i=1:8], label="target")
 title(L"$1 - \frac{<J \delta m, g_e>}{<J' \delta d, \delta m>}$")
+wsave(plotsdir("overthrust_single", "adjtest.png"), gcf())
 
 # Probing vectors
 figure();imshow(dobs.data[1]*dobs.data[1]', cmap="seismic", vmin=-10, vmax=10)
@@ -155,3 +164,4 @@ for r=1:3:7
     title(L"$\mathbf{Z}\mathbf{Z}^\top$")
 end
 tight_layout()
+wsave(plotsdir("overthrust_single", "Zi.png"), gcf())
