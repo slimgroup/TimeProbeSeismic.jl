@@ -2,17 +2,15 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using Distributed
-@everywhere using DrWatson
-@everywhere @quickactivate :TimeProbeSeismic
+using TimeProbeSeismic, SegyIO, JLD2, SlimOptim, Statistics
 
 # Load starting model
 ~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
-n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
+n, d, o, m0, m = read(h5open(datadir("models", "overthrust_model.h5"), "r"), "n", "d", "o", "m0", "m")
 model0 = Model((n[1], n[2]), (d[1], d[2]), (o[1], o[2]), m0)
 
 # Bound constraints
-v0 = sqrt.(1f0 ./ model0.m)
+v0 = sqrt.(1f0 ./ m0)
 vmin = ones(Float32,model0.n) .* 1.3f0
 vmax = ones(Float32,model0.n) .* 6.5f0
 vmin[:, 1:21] .= v0[:, 1:21]   # keep water column fixed
@@ -56,9 +54,9 @@ function objective_function(x, ps; dft=false)
             frequencies[k] = select_frequencies(q_dist; fmin=0.003, fmax=0.02, nf=ps)
         end
         opt = Options(frequencies=frequencies)
-        f, g = JUDI.fwi_objective(model0, q[idx], d_obs[idx]; options=opt)
+        f, g = fwi_objective(model0, q[idx], d_obs[idx]; options=opt)
     elseif isnothing(ps)
-        f, g = JUDI.fwi_objective(model0, q[idx], d_obs[idx])
+        f, g = fwi_objective(model0, q[idx], d_obs[idx])
     else
         f, g = fwi_objective(model0, q[idx], d_obs[idx], ps)
     end
@@ -68,8 +66,7 @@ function objective_function(x, ps; dft=false)
 end
 
 # Bound projection
-ProjBound(x) = median([mmin x mmax], dims=2)[1:end]
-
+proj(x) = reshape(median([vec(mmin) vec(x) vec(mmax)]; dims=2),model0.n)
 
 # FWI with SPG
 options = spg_options(verbose = 3, maxIter = fevals, memory = 3, iniStep = 1f0)
@@ -77,8 +74,7 @@ g_const = 0
 sol = spg(x->objective_function(x, nothing), vec(m0), ProjBound, options)
 
 # Save results
-# wsave
-wsave(datadir("fwi_overthrust", "fwi_std.bson"), typedict(sol))
+@save datadir("fwi_overthrust", "fwi_std.jld2") sol
 
 for i=1:8
     ps = 2^i
@@ -88,12 +84,11 @@ for i=1:8
 
     # Save results
     # wsave
-    wsave(datadir("fwi_overthrust", "fwi_ps$(ps).bson"), typedict(sol))
+    @save datadir("fwi_overthrust", "fwi_ps$(ps).jld2") sol
     # FWI with SPG
     global g_const = 0
     sol = spg(x->objective_function(x, ps; dft=true), vec(m0), ProjBound, options)
 
     # Save results
-    # wsave
-    wsave(datadir("fwi_overthrust", "fwi_dft$(ps).bson"), typedict(sol))
+    @save datadir("fwi_overthrust", "fwi_dft$(ps).jld2") sol
 end

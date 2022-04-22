@@ -3,14 +3,11 @@
 # Date: February 2021
 #
 
-using DrWatson
-@quickactivate :TimeProbeSeismic
-import TimeProbeSeismic: qr_data
+using TimeProbeSeismic, PyPlot, LinearAlgebra, HDF5
 
 # Load starting model
-# Load starting model
 ~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
-n, d, o, m0, m = h5read(datadir("models", "overthrust_model.h5"), "n", "d", "o", "m0", "m")
+n, d, o, m0, m = read(h5open(datadir("models", "overthrust_model.h5"), "r"), "n", "d", "o", "m0", "m")
 
 n = Tuple(n)
 o = Tuple(o)

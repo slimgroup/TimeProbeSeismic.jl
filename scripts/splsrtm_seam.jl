@@ -2,8 +2,7 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using DrWatson
-@quickactivate :TimeProbeSeismic
+using TimeProbeSeismic, Serialization, MECurvelets, SlimOptim
 
 # Download SEAM model and data
 ~isfile(datadir("models", "seam_model.bin")) && run(`curl -L https://www.dropbox.com/s/nyazel8g6ah4cld/seam_model.bin\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.bin"))`)
@@ -41,30 +40,7 @@ S = judiDepthScaling(model0)
 Mr = S*Tm
 
 # Curevelet transform
-C0 = joCurvelet2D(model0.n[1], 2*model0.n[2]; zero_finest=false, DDT=Float32, RDT=Float32)
-
-function C_fwd(im, C, n)
-    im = hcat(reshape(im, n), reshape(im, n)[:, end:-1:1])
-    coeffs = C*vec(im)
-    return coeffs
-end
-
-function C_adj(coeffs, C, n)
-    im = reshape(C'*coeffs, n[1], 2*n[2])
-    return vec(im[:, 1:n[2]] .+ im[:, end:-1:n[2]+1])
-end
-
-C = joLinearFunctionFwd_T(size(C0, 1), n[1]*n[2],
-                          x -> C_fwd(x, C0, n),
-                          b -> C_adj(b, C0, n),
-                          Float32,Float32, name="Cmirrorext")
-
-function sample_indices(indlist, num_ind)
-    inds = unique(rand(indlist, num_ind))
-    samp = sort(indexin(inds, indlist))
-    deleteat!(indlist, samp)
-    return inds
-end
+C = joMECurvelet2D(model.n)
 
 # Setup random shot selection
 batchsize = 4

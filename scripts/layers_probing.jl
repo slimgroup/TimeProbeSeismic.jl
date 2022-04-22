@@ -2,9 +2,7 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using DrWatson
-@quickactivate :TimeProbeSeismic
-import TimeProbeSeismic: qr_data
+using TimeProbeSeismic, PyPlot, LinearAlgebra
 
 # Setup a 2 layers model
 n = (101, 101)
@@ -13,7 +11,6 @@ o = (0., 0.)
 
 m = 1.5f0^(-2) * ones(Float32, n);
 m[:, 51:end] .= .25f0;
-# collect(m[i, i÷2+30:end] .= .35f0 for i=1:101);
 
 model = Model(n, d, o, m; nb=80)
 model0 = smooth(model; sigma=5)
@@ -30,10 +27,6 @@ xrec = range(0f0, stop=(n[1] - 1)*d[1], length=nxrec)
 yrec = 0f0
 zrec = range(2*d[2], stop=2*d[2], length=nxrec)
 
-# xsrc = convertToCell(range(0f0, stop=(n[1] - 1)*d[1], length=nsrc))
-# ysrc =  convertToCell(range(0f0, stop=0f0, length=nsrc))
-# zsrc =  convertToCell(range(2*d[2], stop=2*d[2], length=nsrc))
-
 xsrc = 500f0
 ysrc = 0f0
 zsrc = 2*d[2]
@@ -49,7 +42,7 @@ wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
 # Forward operator
-opt = Options(space_order=16, sum_padding=true, isic=true)
+opt = Options(space_order=16, sum_padding=true)
 F = judiModeling(model, srcGeometry, recGeometry; options=opt)
 F0 = judiModeling(model0, srcGeometry, recGeometry; options=opt)
 J = judiJacobian(F0, q)

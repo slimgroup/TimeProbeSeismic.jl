@@ -1,15 +1,19 @@
 module TimeProbeSeismic
 
+using Reexport, Random, Statistics, LinearAlgebra
 
-using PyCall
-using Distributed, Reexport
+@reexport using JUDI
+using JUDI.PyCall
 
-@reexport using LinearAlgebra, Images, HDF5, SegyIO, JOLI, JUDI, Serialization
-@reexport using JLD2
-@reexport using SlimOptim, PyPlot, JOLI, Printf, Random, Statistics
+import JUDI: judiAbstractJacobian, propagate, judiJacobian, multi_src_fg
+import JUDI: time_resample, judiComposedPropagator, update!, fwi_objective, lsrtm_objective
+import JUDI: MTypes, Dtypes, judiMultiSourceVector
+import Base: adjoint, getindex
 
-export h5read, forward, backprop, smooth, combine_probes, simil
-export typedict, set_r!, set_ps!
+export forward, backprop, smooth, combine_probes, simil
+export typedict, qr_data, datadir, plotsdir, wsave
+
+TPSPath = dirname(pathof(TimeProbeSeismic))
 
 # python imports
 const dv = PyNULL()
