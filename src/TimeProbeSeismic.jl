@@ -13,6 +13,8 @@ import Base: adjoint, getindex
 export forward, backprop, smooth, combine_probes, simil
 export typedict, qr_data, datadir, plotsdir, wsave
 
+TPSPath = dirname(pathof(TimeProbeSeismic))
+
 # python imports
 const dv = PyNULL()
 const wu = PyNULL()

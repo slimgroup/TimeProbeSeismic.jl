@@ -45,12 +45,12 @@ function multi_src_fg(model::Model, q::judiVector, dobs::judiVector, dm, options
     model_loc, dm = get_model(q.geometry, dobs.geometry, model, options, dm)
     modelPy = devito_model(model_loc, options, dm)
     if lin
-        dnl, dl, Q, eu = born(model_loc, q, dobs, dm; ps=ps, options=options, modelPy=modelPy)
+        dnl, dl, Q, eu = born(model_loc, q, dobs, dm; ps=r, options=options, modelPy=modelPy)
     else
-        dl, Q, eu = forward(model_loc, q, dobs; ps=ps, options=options, modelPy=modelPy)
+        dl, Q, eu = forward(model_loc, q, dobs; ps=r, options=options, modelPy=modelPy)
     end
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
     ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
-    return .5f0*norm(residual)^2, PhysicalParameter(ge, model.d, model.o)
+    return Ref{Float32}(.5f0*norm(residual)^2), PhysicalParameter(ge, model.d, model.o)
 end
