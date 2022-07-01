@@ -29,7 +29,7 @@ function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArr
     _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy)
     ge = backprop(model_loc, residual, Q, eu; options=J.options, modelPy=modelPy)
     J.options.limit_m && (ge = extend_gradient(J.model, model_loc, ge))
-    return PhysicalParameter(ge, J.model.d, J.model.o)
+    return PhysicalParameter(ge./J.r, J.model.d, J.model.o)
 end
 
 fwi_objective(model::MTypes, q::Dtypes, dobs::Dtypes, r::Integer; options=Options()) =

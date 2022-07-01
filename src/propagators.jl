@@ -6,21 +6,22 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
     r = size(e, 2)
 
     # Setting forward wavefield
-    u = wu.wavefield(model, space_order)
+    u = wf.wavefield(model, space_order)
 
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, u)
     eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
-    geom_expr, _, rcv = geom.src_rec(model, u, src_coords=src_coords, nt=nt,
-                                     rec_coords=rcv_coords, wavelet=wavelet)
+    geom_expr = geom.geom_expr(model, u, src_coords=src_coords, nt=nt,
+                               rec_coords=rcv_coords, wavelet=wavelet)
+    _, rcv = geom.src_rec(model, u, src_coords, rcv_coords, wavelet, nt)
 
     # Create operator and run
     subs = model.spacing_map
     op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)", opt=ut.opt_op(model))
 
-    summary = op()
+    summary = op(dt=model."critical_dt")
 
     # Output
     return rcv.data, eu, summary
@@ -34,22 +35,21 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
     r = size(e, 2)
 
     # Setting adjoint wavefield
-    v = wu.wavefield(model, space_order, fw=false)
+    v = wf.wavefield(model, space_order, fw=false)
 
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, v, fw=false)
     ev, probe_eq = time_probe(e, v; fw=false)
 
     # Setup source and receiver
-    geom_expr, _, _ = geom.src_rec(model, v, src_coords=rcv_coords, nt=nt,
-                                   wavelet=y, fw=false)
+    geom_expr = geom.geom_expr(model, v, src_coords=rcv_coords, nt=nt, wavelet=y, fw=false)
 
     # Create operator and run
     subs = model.spacing_map
     op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="adjointp$(r)", opt=ut.opt_op(model))
 
     # Run operator
-    summary = op()
+    summary = op(dt=model."critical_dt")
 
     return ev, summary
 end
@@ -62,8 +62,8 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     r = size(e, 2)
 
     # Setting forward wavefield
-    u = wu.wavefield(model, space_order)
-    ul = wu.wavefield(model, space_order, name="l")
+    u = wf.wavefield(model, space_order)
+    ul = wf.wavefield(model, space_order, name="l")
 
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, u)
@@ -71,16 +71,18 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     eu, probe_eq = time_probe(e, u; isic=isic)
 
     # Setup source and receiver
-    geom_expr, _, rcv = geom.src_rec(model, u, src_coords=src_coords, nt=nt,
-                            rec_coords=rcv_coords, wavelet=wavelet)
-    geom_exprl, _, rcvl = geom.src_rec(model, ul, rec_coords=rcv_coords, nt=nt)
+    geom_expr = geom.geom_expr(model, u, src_coords=src_coords, nt=nt,
+                               rec_coords=rcv_coords, wavelet=wavelet)
+    geom_exprl = geom.geom_expr(model, ul, rec_coords=rcv_coords, nt=nt)
+    _, rcv = geom.src_rec(model, u, rec_coords=rcv_coords)
+    _, rcvl = geom.src_rec(model, ul, rec_coords=rcv_coords)
 
     # Create operator and run
     subs = model.spacing_map
     op = dv.Operator(vcat(pde, pdel, probe_eq, geom_expr, geom_exprl), subs=subs,
                      name="bornp$(r)", opt=ut.opt_op(model))
 
-    summary = op()
+    summary = op(dt=model."critical_dt")
 
     # Output
     return rcv.data, rcvl.data, eu, summary
@@ -98,12 +100,7 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=
     # Probed output
     pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
                      shape=(wf.grid.shape..., size(e, 2)), space_order=wf.space_order)
-
-    if size(e, 2) < 17
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
-    else
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
-    end
+    probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
     return pe, probing
 end
 
@@ -120,38 +117,8 @@ function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyOb
     # Probed output
     pe = dv.Function(name="$(wf[1].name)e", grid=wf[1].grid, dimensions=(wf[1].grid.dimensions..., p_e),
                      shape=(wf[1].grid.shape..., size(e, 2)), space_order=wf[1].space_order)
-
-    if size(e, 2) < 17
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
-    else
-        probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
-    end
+    probing = [dv.Inc(pe, s*q*ic(wf, fw, isic))]
     return pe, probing
-end
-
-function time_probe_sim(e::Array{Float32, 2}, wfu::PyObject, wfv::PyObject; isic=false)
-    p_e = dv.DefaultDimension(name="p_e", default_value=size(e, 2))
-    # sub_time
-    t_sub = wf.grid.time_dim
-    s = t_sub.spacing
-    # Probing vector
-    nt = size(e, 1)
-    q = dv.TimeFunction(name="Q", grid=wfu.grid, dimensions=(t_sub, p_e),
-                        shape=(nt, size(e, 2)), time_order=0, initializer=e)
-    q_r = q._subs(t_sub, t_sub.symbolic_max - t_sub)
-    # Probed output
-    peu = dv.Function(name="$(wfu.name)e", grid=wfu.grid, dimensions=(wfu.grid.dimensions..., p_e),
-                      shape=(wfu.grid.shape..., size(e, 2)), space_order=wfu.space_order)
-    pev = dv.Function(name="$(wfv.name)e", grid=wfv.grid, dimensions=(wfv.grid.dimensions..., p_e),
-                      shape=(wfv.grid.shape..., size(e, 2)), space_order=wfv.space_order)
-
-    if size(e, 2) < 17
-        probing = [dv.Inc(peu, s*q*ic(wfu, true, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)]
-        probing = vcat(probing, [dv.Inc(pev, s*q_r*ic(wfv, false, isic)).xreplace(Dict(p_e => i)) for i=1:size(e, 2)])
-    else
-        probing = [dv.Inc(peu, s*q*ic(wfu, true, isic)), dv.Inc(pev, s*q_r*ic(wfv, false, isic))]
-    end
-    return peu, pev, probing
 end
 
 function ic(wf::PyObject, fw::Bool, isic::Bool)
