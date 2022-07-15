@@ -22,7 +22,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
     op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)",
                      opt=ut.opt_op(model))
 
-    summary = op(dt=model."critical_dt")
+    summary = op(dt=model."critical_dt", rcvu=rcv)
 
     # Output
     return rcv.data, eu, summary
@@ -83,7 +83,7 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     op = dv.Operator(vcat(pde, pdel, probe_eq, geom_expr, geom_exprl), subs=subs,
                      name="bornp$(r)", opt=ut.opt_op(model))
 
-    summary = op(dt=model."critical_dt")
+    summary = op(dt=model."critical_dt", rcvu=rcv, rcvul=rcvl)
 
     # Output
     return rcv.data, rcvl.data, eu, summary
@@ -135,8 +135,8 @@ end
 
 function combine(eu::PyObject, ev::PyObject, isic::Bool=false)
     g = dv.Function(name="ge", grid=eu.grid, space_order=0)
+    ev = ev._subs(ev.indices[end], eu.indices[end])
     eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
-    eq = eq.subs(ev.indices[1], eu.indices[1])
     op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
     op()
     g

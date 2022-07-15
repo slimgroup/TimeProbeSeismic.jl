@@ -1,5 +1,5 @@
 
-function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(), ps=16, modelPy=nothing)
+function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(), ps=16, modelPy=nothing, mode=:QR)
     dt_Comp = get_dt(model)
     # Python model
     isnothing(modelPy) && (modelPy = devito_model(model, options))
@@ -13,7 +13,7 @@ function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(
 
     # QR probing vector
     ts = trunc(Int, abs(src_coords[1, end] - rec_coords[1, end])/(1.5f0*dt_Comp))
-    Q = qr_data(d_data, ps; ts=ts)
+    Q = qr_data(d_data, ps; ts=ts, mode=mode)
 
     rec, eu, _ = forward(modelPy, src_coords, rec_coords, q_data, Q, options.space_order, options.isic)
     rec = time_resample(rec, dt_Comp, dobs.geometry)
