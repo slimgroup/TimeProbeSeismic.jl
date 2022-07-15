@@ -7,7 +7,7 @@ using JUDI.PyCall
 
 import JUDI: judiAbstractJacobian, propagate, judiJacobian, multi_src_fg
 import JUDI: time_resample, judiComposedPropagator, update!, fwi_objective, lsrtm_objective
-import JUDI: MTypes, Dtypes, judiMultiSourceVector
+import JUDI: MTypes, Dtypes, judiMultiSourceVector, dmType, process_input_data, make_input, make_src
 import Base: adjoint, getindex
 
 export forward, backprop, smooth, combine_probes, simil

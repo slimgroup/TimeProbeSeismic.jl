@@ -2,7 +2,7 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using TimeProbeSeismic, Serialization, MECurvelets, SlimOptim
+using TimeProbeSeismic, Serialization, MECurvelets, SlimOptim, Images, JLD2
 
 # Download SEAM model and data
 ~isfile(datadir("models", "seam_model.bin")) && run(`curl -L https://www.dropbox.com/s/nyazel8g6ah4cld/seam_model.bin\?dl\=0 --create-dirs -o $(datadir("models", "seam_model.bin"))`)
@@ -31,7 +31,7 @@ dobs = conv_to_new_jv(dobs)
 #################################################################################################
 
 opt = Options(isic=true, space_order=8)
-ps = 32
+ps = 10
 
 # Right-hand preconditioners (model topmute)
 idx_wb = find_water_bottom(vp .- minimum(vp))
@@ -40,26 +40,25 @@ S = judiDepthScaling(model0)
 Mr = S*Tm
 
 # Curevelet transform
-C = joMECurvelet2D(model.n)
+C = joMECurvelet2D(model0.n)
 
 # Setup random shot selection
 batchsize = 4
 nsrc = 44
-ind_left = collect(1:nsrc÷2)
-ind_right = collect(nsrc÷2+1:nsrc)
+
+# Split src indices into batchsize intervals
+_minmax(x, first, last) = x < first ? (first - x) + last : (x > last ? first - (x - last) : x)
+minmax(x) =sort(_minmax.(x, max(x[1], 1), min(nsrc, x[end])))
+intlenght = floor(Int, (1.3*nsrc/batchsize))
+intervals = [minmax(floor.(Int, collect(i:i+intlenght-1))) for i in 0:(nsrc/batchsize):(nsrc-1)]
 
 function breg_obj(x)
     # Force log update
     Base.flush(stdout)
-    # Select batch and set up left-hand preconditioner
-    if length(ind_left) == 0 || length(ind_right) == 0
-        println("Made one pass through data, reseting source sampling")
-        global ind_left = collect(1:nsrc÷2)
-        global ind_right = collect(nsrc÷2+1:nsrc)
-    end
-    i = vcat(sample_indices(ind_left, batchsize), sample_indices(ind_right, batchsize))
-    batchsize == 4  && (global batchsize = 2)
-
+    # Draw one random source per interval
+    inds = rand(1:intlenght, batchsize)
+    i = getindex.(intervals, inds)
+    # Run lsrtm objective and gradient
     f, g = lsrtm_objective(model0, q[i], dobs[i], Mr*x, ps; options=opt, nlind=true)
     return f, Mr'*g
 end

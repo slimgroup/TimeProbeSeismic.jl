@@ -1,0 +1,16 @@
+# FROM slimdocker.azurecr.io/slimjulia:1.1
+FROM mloubout/judi:1.7-dev
+
+RUN julia -e 'using Pkg; Pkg.update();'
+RUN julia -e 'using Pkg; try Pkg.rm("AzureClusterlessHPC"); catch; end'
+RUN julia -e 'using Pkg; try Pkg.rm("TimeProbeSeismic"); catch; end'
+RUN julia -e 'using Pkg, Dates; Pkg.gc(;collect_delay=Minute(0))'
+RUN julia -e 'using Pkg; ENV["AZ_BATCH_TASK_WORKING_DIR"]="compile"; Pkg.add(url="https://github.com/microsoft/AzureClusterlessHPC.jl")'
+RUN julia -e 'using AzureClusterlessHPC'
+RUN julia -e 'using Pkg; Pkg.add(url="https://github.com/slimgroup/TimeProbeSeismic.jl"); using TimeProbeSeismic'
+
+RUN apt update
+RUN apt-get install -y unzip && curl https://rclone.org/install.sh | bash
+RUN rm -rf /var/lib/apt/lists/* \
+	&& apt-get clean
+

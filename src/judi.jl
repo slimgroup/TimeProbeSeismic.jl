@@ -1,4 +1,4 @@
-time_resample(q::judiVector, dt) = begin @assert q.nsrc == 1 ;time_resample(q.data[1], q.geometry.dt[1], dt) end
+time_resample(q::judiVector, dt) = begin @assert q.nsrc == 1 ;time_resample(make_input(q), q.geometry.dt[1], dt) end
 
 #########################
 struct judiJacobianP{D, O, FT} <: judiAbstractJacobian{D, O, FT}
@@ -19,6 +19,12 @@ end
 adjoint(J::judiJacobianP{D, O, FT}) where {D, O, FT} = judiJacobianP{D, adjoint(O), FT}(J.n, J.m, J.F, J.q, J.r, J.dobs)
 getindex(J::judiJacobianP{D, O, FT}, i) where {D, O, FT} = judiJacobianP{D, O, FT}(J.m[i], J.n[i], J.F[i], J.q[i], J.r, J.dobs[i])
 
+process_input_data(::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number, FT} = q
+function make_input(J::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number, FT}
+    srcGeom, srcData = make_src(J.q, J.F.qInjection)
+    return srcGeom, srcData, J.F.rInterpolation.data[1], nothing, reshape(q, J.model.n)
+end 
+
 function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArray{T}) where {T, D, FT}
     J.q.geometry = Geometry(J.q.geometry)
     residual.geometry = Geometry(residual.geometry)
@@ -35,8 +41,8 @@ end
 fwi_objective(model::MTypes, q::Dtypes, dobs::Dtypes, r::Integer; options=Options()) =
     fwi_objective(model, q, dobs; options=options, r=r)
 
-lsrtm_objective(model::MTypes, q::Dtypes, dobs::Dtypes, r::Integer; options=Options(), nlind=false) =
-    lsrtm_objective(model, q, dobs; options=options, nlind=nlind, r=r)
+lsrtm_objective(model::MTypes, q::Dtypes, dobs::Dtypes, dm::dmType, r::Integer; options=Options(), nlind=false) =
+    lsrtm_objective(model, q, dobs, dm; options=options, nlind=nlind, r=r)
 
 function multi_src_fg(model::Model, q::judiVector, dobs::judiVector, dm, options::JUDIOptions, nlind::Bool, lin::Bool, r::Integer)
     q.geometry = Geometry(q.geometry)
