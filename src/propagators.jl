@@ -22,7 +22,8 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
     op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)",
                      opt=ut.opt_op(model))
 
-    summary = op(dt=model."critical_dt", rcvu=rcv)
+    kw = Dict(Symbol(rcv.name) => rcv)
+    summary = op(dt=model."critical_dt"; kw...)
 
     # Output
     return rcv.data, eu, summary
@@ -83,7 +84,8 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     op = dv.Operator(vcat(pde, pdel, probe_eq, geom_expr, geom_exprl), subs=subs,
                      name="bornp$(r)", opt=ut.opt_op(model))
 
-    summary = op(dt=model."critical_dt", rcvu=rcv, rcvul=rcvl)
+    kw = Dict(Symbol(rcv.name) => rcv, Symbol(rcvl.name) => rcvl)
+    summary = op(dt=model."critical_dt"; kw...)
 
     # Output
     return rcv.data, rcvl.data, eu, summary
