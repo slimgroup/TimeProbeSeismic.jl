@@ -2,31 +2,7 @@
 
 # TimeProbeSeismic
 
-## Package
-
-This package can also be installed directly as a standard julia package with the `dev/add` command.
-
-## DrWatson
-
-This code base is using the Julia Language and [DrWatson](https://juliadynamics.github.io/DrWatson.jl/stable/)
-to make a reproducible scientific project named
-> TimeProbeSeismic
-
-It is authored by Mathias Louboutin, Felix J. Herrmann.
-
-To (locally) reproduce this project, do the following:
-
-0. Download this code base. Notice that raw data are typically not included in the
-   git-history and may need to be downloaded independently.
-1. Open a Julia console and do:
-   ```
-   julia> using Pkg
-   julia> Pkg.activate("path/to/this/project")
-   julia> Pkg.instantiate()
-   ```
-
-This will install all necessary packages for you to be able to run the scripts and
-everything should work out of the box.
+Wave-equation based inversion with random trace estimation based gradient computation. THis method drastically reduces the memory imprint of adjont-state while managing the loss of accuracy via carefully chosing the probing vector in the range of the wavefield.
 
 ## Examples
 
