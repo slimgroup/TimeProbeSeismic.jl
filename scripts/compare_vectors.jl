@@ -2,7 +2,7 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using TimeProbeSeismic, PyPlot, LinearAlgebra, HDF5, Images
+using TimeProbeSeismic, PyPlot, LinearAlgebra, HDF5, Images, SlimPlotting
 
 # Load starting model
 ~isfile(datadir("models/", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
@@ -26,14 +26,14 @@ yrec = 0f0
 zrec = range(12.5f0, stop=12.5f0, length=nxrec)
 
 # receiver sampling and recording time
-timeD = 3000f0   # receiver recording time [ms]
+timeD = 4000f0   # receiver recording time [ms]
 dtD = 4f0  # receiver sampling interval [ms]
 
 # Set up receiver structure
 recGeometry = Geometry(xrec, yrec, zrec; dt=dtD, t=timeD, nsrc=nsrc)
 
 # Set up source geometry (cell array with source locations for each shot)
-xsrc = div(n[1], 2) * d[1]
+xsrc = div(n[1], 4) * d[1]
 ysrc = 0f0
 zsrc = 12.5f0
 
@@ -50,6 +50,8 @@ ntComp = get_computational_nt(srcGeometry, recGeometry, model)
 info = Info(prod(n), nsrc, ntComp)
 
 ###################################################################################################
+rlist = [4, 16, 32, 64, 128]
+nr = length(rlist)
 # Write shots as segy files to disk
 opt = Options(space_order=16)
 
@@ -80,11 +82,11 @@ function fourierJ(F0, q, ps)
     return J
 end
 
-ge = Array{Any}(undef, 3, 8)
+ge = Array{Any}(undef, 3, nr)
 
 for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
-    for ps=1:8
-        Jp = mode == :Fourier ? fourierJ(F0, q, 2^ps) : judiJacobian(F0, q, 2^ps, dobs; mode=mode)
+    for ps=1:nr
+        Jp = mode == :Fourier ? fourierJ(F0, q, rlist[ps]) : judiJacobian(F0, q, rlist[ps], dobs; mode=mode)
         ge[p, ps] = Jp'*residual
     end
 end
@@ -96,13 +98,13 @@ for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
     subplot(331)
     imshow(g', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
     title("Reference")
-    for ps=1:8
+    for ps=1:nr
         subplot(3,3,ps+1)
         imshow(ge[p, ps]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
         title("$(mode) r=$(2^ps)")
     end
     tight_layout()
-    savefig(plotsdir("geo-pros-paper/", "Gradient-$(mode).pdf"), bbox_inches=:tight, dpi=150)
+    savefig(plotsdir("geo-pros-paper/", "Gradient-$(mode).png"), bbox_inches=:tight, dpi=150)
 
     clip = maximum(g)/10
 
@@ -110,11 +112,71 @@ for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
     subplot(331)
     imshow(g', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
     title("Reference")
-    for ps=1:8
+    for ps=1:nr
         subplot(3,3,ps+1)
         imshow(g' - ge[p, ps]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
         title("$(mode) Difference r=$(2^ps)")
     end
     tight_layout()
-    savefig(plotsdir("geo-pros-paper/", "Error-$(mode).pdf"), bbox_inches=:tight, dpi=150)
+    savefig(plotsdir("geo-pros-paper/", "Error-$(mode).png"), bbox_inches=:tight, dpi=150)
 end
+
+
+# Single plot
+for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
+    f, axarr = subplots(figsize=(30, 4), 2, nr)
+    suptitle(mode)
+    for ps=1:nr
+        sca(axarr[1, ps])
+        plot_simage(ge[p, ps]'; cmap="seismic", new_fig=false, name="r=$(rlist[ps])", perc=95)
+        sca(axarr[2, ps])
+        plot_simage(g' - ge[p, ps]'; cmap="seismic", new_fig=false, name="", perc=99)
+        if ps > 1
+            for r=1:2
+                axarr[r, ps].set_yticklabels([])
+                axarr[r, ps].set_yticks([])
+                axarr[r, ps].set_ylabel("")
+            end
+
+        end
+        axarr[1, ps].set_xticklabels([])
+        axarr[1, ps].set_xticks([])
+        axarr[1, ps].set_xlabel("")
+    end
+    axarr[2, 1].set_ylabel("Error \n \n Depth[m]")
+    tight_layout()
+    subplots_adjust(wspace=0, hspace=0)
+    savefig(plotsdir("geo-pros-paper/", "Grads-$(mode).png"), bbox_inches=:tight, dpi=150)
+end
+# Plot errors
+
+el2 = zeros(3, nr)
+sim = zeros(3, nr)
+
+
+for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
+    for ps=1:nr
+        el2[p, ps] = .5*norm(g - ge[p, ps])^2
+        sim[p, ps] = simil(g, ge[p, ps])
+    end
+end
+
+
+pis = rlist
+
+figure(figsize=(8,4))
+subplot(121)
+plot(pis, el2[1, :], :r, label="DFT")
+plot(pis, el2[2, :], :g, label="QR")
+plot(pis, el2[3, :], :b, label="Rademacher")
+xlabel("Number of probing vectors")
+ylabel(L"$\ell_2$ error")
+legend()
+subplot(122)
+plot(pis, sim[1, :], :r, label="DFT")
+plot(pis, sim[2, :], :g, label="QR")
+plot(pis, sim[3, :], :b, label="Rademacher")
+xlabel("Number of probing vectors")
+ylabel("Similarity")
+legend()
+savefig(plotsdir("geo-pros-paper/", "metrics.png"), bbox_inches=:tight, dpi=150)

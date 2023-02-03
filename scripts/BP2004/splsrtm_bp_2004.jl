@@ -9,13 +9,9 @@ using Images, SlimOptim
 # TO DO
 # Set up path where data will be saved
 # data_path = "/data/mlouboutin3/BP2004/bp_observed/"
-<<<<<<< HEAD
-data_path = "/data/mlouboutin3/BP2004"
-=======
 data_path = "/mnt/c/Users/mathi/Dropbox (GaTech)/BP_synthetic_2004/SynData/"
 
 using JUDI, SegyIO, JLD, PyPlot, JOLI, Random, LinearAlgebra, TimeProbeSeismic, MECurvelets
->>>>>>> 1c9037e (fix iunput)
 
 # Load velocity model(replace with correct paths)
 if !isfile("bp_synthetic_2004_migration_velocity.jld")

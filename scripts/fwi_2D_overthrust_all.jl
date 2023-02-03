@@ -2,7 +2,8 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using TimeProbeSeismic, SegyIO, JLD2, SlimOptim, Statistics
+
+using TimeProbeSeismic, SegyIO, JLD2, SlimOptim, Statistics, HDF5, Random, LinearAlgebra
 
 # Load starting model
 ~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
@@ -66,12 +67,12 @@ function objective_function(x, ps; dft=false)
 end
 
 # Bound projection
-proj(x) = reshape(median([vec(mmin) vec(x) vec(mmax)]; dims=2),model0.n)
+proj(x) = reshape(median([vec(mmin) vec(x) vec(mmax)]; dims=2), size(x))
 
 # FWI with SPG
 options = spg_options(verbose = 3, maxIter = fevals, memory = 3, iniStep = 1f0)
 g_const = 0
-sol = spg(x->objective_function(x, nothing), vec(m0), ProjBound, options)
+sol = spg(x->objective_function(x, nothing), vec(m0), proj, options)
 
 # Save results
 @save datadir("fwi_overthrust", "fwi_std.jld2") sol
@@ -80,14 +81,14 @@ for i=1:8
     ps = 2^i
     # FWI with SPG
     global g_const = 0
-    sol = spg(x->objective_function(x, ps), vec(m0), ProjBound, options)
+    sol = spg(x->objective_function(x, ps), vec(m0), proj, options)
 
     # Save results
     # wsave
     @save datadir("fwi_overthrust", "fwi_ps$(ps).jld2") sol
     # FWI with SPG
     global g_const = 0
-    sol = spg(x->objective_function(x, ps; dft=true), vec(m0), ProjBound, options)
+    sol = spg(x->objective_function(x, ps; dft=true), vec(m0), proj, options)
 
     # Save results
     @save datadir("fwi_overthrust", "fwi_dft$(ps).jld2") sol

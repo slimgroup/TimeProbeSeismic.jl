@@ -3,7 +3,7 @@
 # Date: February 2021
 #
 
-using TimeProbeSeismic, PyPlot, HDF5
+using TimeProbeSeismic, PyPlot, HDF5, SlimPlotting
 
 # Load starting model
 ~isfile(datadir("models", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
@@ -61,24 +61,24 @@ title(L"$d_{obs} d_{obs}^\top$")
 
 timea = 0:4f0:3000f0
 
-fig, axs = subplots(5, 3, sharex=:col, sharey=:row, gridspec_kw=Dict(:hspace=> 0, :wspace=> 0))
+fig, axs = subplots(3, 5, figsize=(10, 6), sharex=:col, sharey=:row, gridspec_kw=Dict(:hspace=> 0, :wspace=> 0))
 for (i, ps)=enumerate([4, 16, 32, 64, 256])
     @show i
     # QR
     Q = qr_data(dobs.data[1], ps)
-    axs[i, 1].imshow(Q*Q',vmin=-.05, vmax=.05, cmap="seismic", aspect="auto")
-    i == 1 && axs[i, 1].set_title(L"$\mathbf{Q}\mathbf{Q}^\top$")
-    axs[i, 1].set_ylabel("r=$(ps)", rotation=0, labelpad=20)
-    # gaussian
+    axs[2, i].imshow(Q*Q',vmin=-.05, vmax=.05, cmap="cet_CET_D1A", aspect="auto")
+    i == 1 && axs[2, i].set_ylabel(L"$\mathbf{Q}\mathbf{Q}^\top$", rotation=0, labelpad=20)
+    axs[1, i].set_title("r=$(ps)")
+    # Rademacher
     E = rand([-1f0, 1f0], length(timea), ps)/sqrt(ps)
-    axs[i, 2].imshow(E*E',vmin=-.25, vmax=.25, cmap="seismic", aspect="auto")
-    i == 1 && axs[i, 2].set_title(L"$\mathbf{Z}\mathbf{Z}^\top$")
+    axs[1, i].imshow(E*E',vmin=-.25, vmax=.25, cmap="cet_CET_D1A", aspect="auto")
+    i == 1 && axs[1, i].set_ylabel(L"$\mathbf{Z}\mathbf{Z}^\top$", rotation=0, labelpad=20)
     # DFT
     freq = select_frequencies(q_dist; fmin=0.002, fmax=0.04, nf=ps)
     F = exp.(-2*im*pi*timea*freq')/sqrt(ps)
-    axs[i, 3].imshow(real.(F*F'),vmin=-.5, vmax=.5, cmap="seismic", aspect="auto")
-    i == 1 && axs[i, 3].set_title(L"$\mathbf{F}\mathbf{F}^\top$")
+    axs[3, i].imshow(real.(F*F'),vmin=-.5, vmax=.5, cmap="cet_CET_D1A", aspect="auto")
+    i == 1 && axs[3, i].set_ylabel(L"$\mathbf{F}\mathbf{F}^\top$", rotation=0, labelpad=20)
 end
 plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
 
-wsave(plotsdir("overthrust_single", "Zi.png"), gcf())
+wsave(plotsdir("overthrust_single", "Zi.png"), gcf(), dpi=150)

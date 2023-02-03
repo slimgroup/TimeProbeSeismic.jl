@@ -5,7 +5,7 @@
 using TimeProbeSeismic, PyPlot, LinearAlgebra
 
 # Setup a 2 layers model
-n = (101, 101)
+n = (301, 301)
 d = (10., 10.)
 o = (0., 0.)
 
