@@ -1,7 +1,7 @@
 name = "TimeProbeSeismic"
 uuid = "cd417b76-fc6b-4228-be91-94f5ea77264b"
 authors = ["Mathias Louboutin", "Felix J. Herrmann"]
-version = "0.2.1"
+version = "1.0.0"
 
 [deps]
 JUDI = "f3b833dc-6b2e-5b9c-b940-873ed6319979"
