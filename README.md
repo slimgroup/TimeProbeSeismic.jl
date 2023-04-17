@@ -22,6 +22,10 @@ This software is develloped as Georgia Institute of Technology as part of the ML
 
 - Mathias Louboutin: mlouboutin3@gatech.edu
 
+# Acknowledgment
+
+The developement of this software and its GPU portability was made possible by the NVIDIA Academic Hardware Grant.
+
 # Cite us
 
 Please use the following citation if you use our software:
