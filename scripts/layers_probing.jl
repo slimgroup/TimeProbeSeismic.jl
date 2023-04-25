@@ -2,7 +2,7 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using TimeProbeSeismic, PyPlot, LinearAlgebra
+using TimeProbeSeismic, PyPlot, LinearAlgebra, Printf
 
 # Setup a 2 layers model
 n = (101, 101)
@@ -27,7 +27,7 @@ xrec = range(0f0, stop=(n[1] - 1)*d[1], length=nxrec)
 yrec = 0f0
 zrec = range(2*d[2], stop=2*d[2], length=nxrec)
 
-xsrc = 500f0
+xsrc = 100f0
 ysrc = 0f0
 zsrc = 2*d[2]
 
@@ -99,8 +99,8 @@ mw(x::Array) = x[:, 30:end]
 similar2 = [simil(mw(g), mw(ge[i])) for i=1:8]
 
 figure()
-semilogx([2^i for i=1:8], similar, "-or", label="Full gradient", basex=2)
-semilogx([2^i for i=1:8], similar2, "-ob", label="Muted water layer", basex=2)
+semilogx([2^i for i=1:8], similar, "-or", label="Full gradient", base=2)
+semilogx([2^i for i=1:8], similar2, "-ob", label="Muted water layer", base=2)
 title(L"Similarity $\frac{<g, g_e>}{||g|| ||g_e||}$")
 xlabel("Number of probing vectors")
 legend()
@@ -117,8 +117,8 @@ end
 
 att = [abs(1 - J0/at[i]) for i=1:8]
 figure()
-semilogx([2^i for i=1:8], att, basex=2, label="Probed adjoint test")
-semilogx([2^i for i=1:8], [0 for i=1:8], label="target")
+semilogx([2^i for i=1:8], att, base=2, label="Probed adjoint test")
+semilogx([2^i for i=1:8], [0 for i=1:8], base=2, label="target")
 title(L"$1 - \frac{<J \delta m, g_e>}{<J' \delta d, \delta m>}$")
 
 
