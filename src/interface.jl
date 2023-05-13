@@ -66,17 +66,16 @@ remove_padding(gradient, nb, ::Number; true_adjoint::Bool=false) = remove_paddin
 
 
 function remove_padding(gradient::AbstractArray{DT}, nb::NTuple{Nd, NTuple{2, Int64}}, ::Vector{DT}; true_adjoint::Bool=false) where {DT, Nd}
-    # no = ndims(gradient) - length(nb)
-    # N = size(gradient)[no+1:end]
-    # hd = tuple([Colon() for _=1:no]...)
-    # if true_adjoint
-    #     for (dim, (nbl, nbr)) in enumerate(nb)
-    #         diml = dim+no
-    #         selectdim(gradient, diml, nbl+1) .+= dropdims(sum(selectdim(gradient, diml, 1:nbl), dims=diml), dims=diml)
-    #         selectdim(gradient, diml, N[dim]-nbr) .+= dropdims(sum(selectdim(gradient, diml, N[dim]-nbr+1:N[dim]), dims=diml), dims=diml)
-    #     end
-    # end
-    # out = gradient[hd..., [nbl+1:nn-nbr for ((nbl, nbr), nn) in zip(nb, N)]...]
-    # return out
-    return gradient
+    no = ndims(gradient) - length(nb)
+    N = size(gradient)[no+1:end]
+    hd = tuple([Colon() for _=1:no]...)
+    if true_adjoint
+        for (dim, (nbl, nbr)) in enumerate(nb)
+            diml = dim+no
+            selectdim(gradient, diml, nbl+1) .+= dropdims(sum(selectdim(gradient, diml, 1:nbl), dims=diml), dims=diml)
+            selectdim(gradient, diml, N[dim]-nbr) .+= dropdims(sum(selectdim(gradient, diml, N[dim]-nbr+1:N[dim]), dims=diml), dims=diml)
+        end
+    end
+    out = gradient[hd..., [nbl+1:nn-nbr for ((nbl, nbr), nn) in zip(nb, N)]...]
+    return out
 end

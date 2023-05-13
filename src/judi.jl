@@ -15,7 +15,7 @@ end
 # Jacobian with probing
 function judiJacobian(F::judiComposedPropagator{D, O}, q::judiMultiSourceVector, r::Integer, dobs::judiMultiSourceVector;
                       options=nothing, mode=:QR, offsets=0f0) where {D, O}
-    mode ∈ [:QR, :Rademacher] || throw(ArgumentError("Probing vector mode unrecognized, must be `:QR` or `:Rademacher`"))
+    mode ∈ [:QR, :Rademacher, :Gaussian] || throw(ArgumentError("Probing vector mode unrecognized, must be `:QR` or `:Rademacher`"))
     update!(F.F.options, options)
     return judiJacobianP{D, :born, typeof(F)}(F.m, space(F.model.n), F, q, r, mode, dobs, asvec(offsets))
 end
