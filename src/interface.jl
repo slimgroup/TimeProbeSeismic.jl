@@ -43,8 +43,9 @@ function born(model::Model, q::judiVector, dobs::judiVector, dm; options=Options
     return judiVector(dobs.geometry, recnl), judiVector(dobs.geometry, recl), Q, eu
 end
 
+
 function backprop(model::Model, residual::judiVector, Q::Array{Float32}, eu::PyObject;
-                 options=Options(), ps=16, modelPy=nothing)
+                 options=Options(), ps=16, modelPy=nothin, offsets=0f0, pe=nothing)
     dt_Comp = get_dt(model)
     # Python mode
     isnothing(modelPy) && (modelPy = devito_model(model, options))
@@ -54,7 +55,27 @@ function backprop(model::Model, residual::judiVector, Q::Array{Float32}, eu::PyO
     # Set up coordinates with devito dimensions
     rec_coords = setup_grid(residual.geometry[1], modelPy.shape)
 
-    ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order)
-    g = combine(eu, ev,  options.IC == "isic")
-    return remove_padding(g.data, modelPy.padsizes; true_adjoint=options.sum_padding)
+    ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order; pe=pe)
+    inds = Int64.(offsets ./ model.d[1])
+    g = combine(eu, ev, inds, options.IC == "isic")
+    return remove_padding(g.data, modelPy.padsizes, offsets; true_adjoint=options.sum_padding)
+end
+
+
+remove_padding(gradient, nb, ::Number; true_adjoint::Bool=false) = remove_padding(gradient, nb; true_adjoint=true_adjoint)
+
+
+function remove_padding(gradient::AbstractArray{DT}, nb::NTuple{Nd, NTuple{2, Int64}}, ::Vector{DT}; true_adjoint::Bool=false) where {DT, Nd}
+    no = ndims(gradient) - length(nb)
+    N = size(gradient)[no+1:end]
+    hd = tuple([Colon() for _=1:no]...)
+    if true_adjoint
+        for (dim, (nbl, nbr)) in enumerate(nb)
+            diml = dim+no
+            selectdim(gradient, diml, nbl+1) .+= dropdims(sum(selectdim(gradient, diml, 1:nbl), dims=diml), dims=diml)
+            selectdim(gradient, diml, N[dim]-nbr) .+= dropdims(sum(selectdim(gradient, diml, N[dim]-nbr+1:N[dim]), dims=diml), dims=diml)
+        end
+    end
+    out = gradient[hd..., [nbl+1:nn-nbr for ((nbl, nbr), nn) in zip(nb, N)]...]
+    return out
 end

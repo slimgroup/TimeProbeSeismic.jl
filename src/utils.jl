@@ -3,6 +3,7 @@ typedict(x::T) where {T} = Dict(fn=>getfield(x, fn) for fn ∈ fieldnames(T))
 
 function qr_data(d::Array{Float32,2}, ps::Integer; seed=nothing, ts=0, mode=:QR)
     !isnothing(seed) && Random.seed!(seed)
+    mode == :Gaussian && (return randn(Float32, size(d, 1), ps) ./ Float32(sqrt(ps)))
     S = rand([-1f0, 1f0], size(d, 1), ps)
     mode == :Rademacher && (return S ./ Float32(sqrt(ps)))
     ts > 0 && (d = circshift(d, (-ts, 0)))
