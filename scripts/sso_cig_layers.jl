@@ -20,7 +20,7 @@ m = (1f0 ./ v).^2
 m0 = (1f0 ./ v0).^2
 
 # Setup info and model structure
-nsrc = 101	# number of sources
+nsrc = 3 #101	# number of sources
 model = Model(n, d, o, m; nb=80)
 model0 = Model(n, d, o, m0; nb=80)
 dm = model.m - model0.m

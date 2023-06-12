@@ -1,11 +1,11 @@
 
-function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(), ps=16, modelPy=nothing, mode=:QR)
+function forward(model::AbstractModel, q::judiVector, dobs::judiVector; options=Options(), ps=16, modelPy=nothing, mode=:QR)
     dt_Comp = get_dt(model)
     # Python model
     isnothing(modelPy) && (modelPy = devito_model(model, options))
     # Interpolate input data to computational grid
-    q_data = time_resample(q[1], dt_Comp)
-    d_data = time_resample(dobs[1], dt_Comp)
+    q_data = time_resample(make_input(q), q.geometry, dt_Comp)
+    d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
 
     # Set up coordinates with devito dimensions
     src_coords = setup_grid(q.geometry[1], modelPy.shape)
@@ -20,14 +20,14 @@ function forward(model::Model, q::judiVector, dobs::judiVector; options=Options(
     return judiVector(dobs.geometry, rec), Q, eu
 end
 
-function born(model::Model, q::judiVector, dobs::judiVector, dm; options=Options(), ps=16, modelPy=nothing)
+function born(model::AbstractModel, q::judiVector, dobs::judiVector, dm; options=Options(), ps=16, modelPy=nothing)
     dt_Comp = get_dt(model)
     # Python model
     isnothing(modelPy) && (modelPy = devito_model(model, options; dm=dm))
 
     # Interpolate input data to computational grid
-    q_data = time_resample(q[1], dt_Comp)
-    d_data = time_resample(dobs[1], dt_Comp)
+    q_data = time_resample(make_input(q), q.geometry, dt_Comp)
+    d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
 
     # Set up coordinates with devito dimensions
     src_coords = setup_grid(q.geometry[1], modelPy.shape)
@@ -44,13 +44,13 @@ function born(model::Model, q::judiVector, dobs::judiVector, dm; options=Options
 end
 
 
-function backprop(model::Model, residual::judiVector, Q::Array{Float32}, eu::PyObject;
+function backprop(model::AbstractModel, residual::judiVector, Q::Array{Float32}, eu::PyObject;
                  options=Options(), ps=16, modelPy=nothin, offsets=0f0, pe=nothing)
     dt_Comp = get_dt(model)
     # Python mode
     isnothing(modelPy) && (modelPy = devito_model(model, options))
     # Interpolate input data to computational grid
-    d_data = time_resample(residual[1], dt_Comp)
+    d_data = time_resample(make_input(residual), residual.geometry, dt_Comp)
 
     # Set up coordinates with devito dimensions
     rec_coords = setup_grid(residual.geometry[1], modelPy.shape)

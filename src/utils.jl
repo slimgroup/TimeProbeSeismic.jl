@@ -15,7 +15,7 @@ end
 simil(x, y) = dot(x, y)/(norm(x)*norm(y))
 
 # Model smoother
-function smooth(m::Model; sigma=3)
+function smooth(m::AbstractModel; sigma=3)
     nm = deepcopy(m)
     inds = [1:ni for ni ∈ m.n]
     @inbounds for i ∈ CartesianIndices(tuple(inds...))
@@ -26,12 +26,12 @@ function smooth(m::Model; sigma=3)
     return nm
 end
 
-function get_model(src_geom::Geometry, rec_geom::Geometry, model::Model, options::JUDIOptions)
+function get_model(src_geom::Geometry, rec_geom::Geometry, model::AbstractModel, options::JUDIOptions)
     ~options.limit_m && return model
     return limit_model_to_receiver_area(src_geom, rec_geom, deepcopy(model), options.buffer_size)[1]
 end
 
-function get_model(src_geom::Geometry, rec_geom::Geometry, model::Model, options::JUDIOptions, dm)
+function get_model(src_geom::Geometry, rec_geom::Geometry, model::AbstractModel, options::JUDIOptions, dm)
     ~options.limit_m && return (model, dm)
     return limit_model_to_receiver_area(src_geom, rec_geom, deepcopy(model), options.buffer_size; pert=dm)
 end

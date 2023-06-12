@@ -31,7 +31,23 @@ process_input_data(::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number
 function make_input(J::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number, FT}
     srcGeom, srcData = make_src(J.q, J.F.qInjection)
     return srcGeom, srcData, J.F.rInterpolation.data[1], nothing, reshape(q, J.model.n)
-end 
+end
+
+function multi_src_propagate(F::judiJacobianP{D, O, FT}, q::AbstractArray{D}) where {D<:Number, FT, O}
+    q = process_input_data(F, q)
+    # Number of sources and init result
+    nsrc = get_nsrc(F, q)
+    pool = JUDI._worker_pool()
+    arg_func = i -> (F[i], JUDI.src_i(F, q, i))
+    # Distribute source
+    res = JUDI.run_and_reduce(propagate, pool, nsrc, arg_func)
+    if length(F.offsets) < 2    
+        res = JUDI._project_to_physical_domain(res, F.model)
+    end
+    res = JUDI.update_illum(res, F)
+    res = JUDI.as_vec(res, Val(F.options.return_array))
+    return res
+end
 
 function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArray{T}) where {T, D, FT}
     J.q.geometry = Geometry(J.q.geometry)
@@ -44,7 +60,14 @@ function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArr
     ge = backprop(model_loc, residual, Q, eu; options=J.options, modelPy=modelPy, offsets=J.offsets)
     J.options.limit_m && (ge = extend_gradient(J.model, model_loc, ge))
 
-    g = isa(J.offsets, Number) ? PhysicalParameter(ge, J.model.d, J.model.o) : ge
+    if isa(J.offsets, Number)
+        g = PhysicalParameter(ge, J.model.d, J.model.o)
+    else
+        ncig = (size(ge, 1), model_loc.n...)
+        o = (minimum(J.offsets), model_loc.o...)
+        d = (abs(diff(J.offsets)[1]), model_loc.d...)
+        g = PhysicalParameter(ncig, d, o, ge)
+    end
     return g
 end
 
@@ -54,7 +77,7 @@ fwi_objective(model::MTypes, q::Dtypes, dobs::Dtypes, r::Integer; options=Option
 lsrtm_objective(model::MTypes, q::Dtypes, dobs::Dtypes, dm::dmType, r::Integer; options=Options(), nlind=false, offsets=0f0) =
     lsrtm_objective(model, q, dobs, dm; options=options, nlind=nlind, r=r, offsets=offsets)
 
-function multi_src_fg(model::Model, q::judiVector, dobs::judiVector, dm, options::JUDIOptions, nlind::Bool, lin::Bool, r::Integer, offsets)
+function multi_src_fg(model::AbstractModel, q::judiVector, dobs::judiVector, dm, options::JUDIOptions, nlind::Bool, lin::Bool, r::Integer, offsets)
     q.geometry = Geometry(q.geometry)
     dobs.geometry = Geometry(dobs.geometry)
 

@@ -5,9 +5,10 @@ using Reexport, Random, Statistics, LinearAlgebra
 @reexport using JUDI
 using JUDI.PyCall
 
-import JUDI: judiAbstractJacobian, propagate, judiJacobian, multi_src_fg, remove_padding
+import JUDI: judiAbstractJacobian, propagate, judiJacobian, multi_src_fg, remove_padding, AbstractModel
 import JUDI: time_resample, judiComposedPropagator, update!, fwi_objective, lsrtm_objective
 import JUDI: MTypes, Dtypes, judiMultiSourceVector, dmType, process_input_data, make_input, make_src
+import JUDI: multi_src_propagate
 import Base: adjoint, getindex
 
 export forward, backprop, smooth, combine_probes, simil
