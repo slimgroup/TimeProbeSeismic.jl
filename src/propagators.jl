@@ -105,8 +105,8 @@ function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=
                         shape=(nt, ne), time_order=0, initializer=e)
     # Probed output
     if isnothing(pe)
-        pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(p_e, wf.grid.dimensions...),
-                        shape=(ne, wf.grid.shape...), space_order=wf.space_order)
+        pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
+                        shape=(wf.grid.shape..., ne), space_order=wf.space_order)
     end
     probing = [dv.Eq(pe, pe + s*q*ic(wf, fw, isic))]
     return pe, probing
@@ -146,7 +146,7 @@ end
 function combine(eu::PyObject, ev::PyObject, offsets::Number, isic::Bool=false)
     @assert offsets == 0
     g = dv.Function(name="ge", grid=eu.grid, space_order=0)
-    ev = ev._subs(ev.indices[1], eu.indices[1])
+    ev = ev._subs(ev.indices[end], eu.indices[end])
     eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
     op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
     op()
@@ -165,13 +165,13 @@ function combine(eu::PyObject, ev::PyObject, offsets::Vector{Int64}, isic::Bool=
     # IC with space shifts
     g = dv.Function(name="ge", grid=eu.grid, shape=(2*nh+1, eu.grid.shape...),
                     dimensions=(offs, eu.grid.dimensions...), space_order=0)
-    ev = ev._subs(ev.indices[1], eu.indices[1])
+    ev = ev._subs(ev.indices[end], eu.indices[end])
     x = eu.grid.dimensions[1]
 
     ev = ev._subs(x, x+oh)
     eu = eu._subs(x, x-oh)
     eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
-
+    
     op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
     xs = maximum(abs.(offsets))
     xe = eu.grid.shape[1] - xs
