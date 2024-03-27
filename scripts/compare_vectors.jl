@@ -2,11 +2,13 @@
 # Author: mlouboutin3@gatech.edu
 # Date: February 2021
 #
-using TimeProbeSeismic, PyPlot, LinearAlgebra, HDF5, Images
+using TimeProbeSeismic, PyPlot, LinearAlgebra, HDF5, Images, SlimPlotting
+
+# set_devito_config("log-level", "PERF")
 
 # Load starting model
-~isfile(datadir("models/", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models", "overthrust_model.h5"))`)
-n, d, o, m0, m = read(h5open(datadir("models", "overthrust_model.h5"), "r"), "n", "d", "o", "m0", "m")
+~isfile(datadir("models/", "overthrust_model.h5")) && run(`curl -L ftp://slim.gatech.edu/data/SoftwareRelease/WaveformInversion.jl/2DFWI/overthrust_model_2D.h5 --create-dirs -o $(datadir("models/", "overthrust_model.h5"))`)
+n, d, o, m0, m = read(h5open(datadir("models/", "overthrust_model.h5"), "r"), "n", "d", "o", "m0", "m")
 
 n = Tuple(n)
 o = Tuple(o)
@@ -33,7 +35,7 @@ dtD = 4f0  # receiver sampling interval [ms]
 recGeometry = Geometry(xrec, yrec, zrec; dt=dtD, t=timeD, nsrc=nsrc)
 
 # Set up source geometry (cell array with source locations for each shot)
-xsrc = div(n[1], 2) * d[1]
+xsrc = div(n[1], 4) * d[1]
 ysrc = 0f0
 zsrc = 12.5f0
 
@@ -45,17 +47,12 @@ f0 = 0.010f0     # kHz
 wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
-# Set up info structure for linear operators
-ntComp = get_computational_nt(srcGeometry, recGeometry, model)
-info = Info(prod(n), nsrc, ntComp)
-
 ###################################################################################################
-# Write shots as segy files to disk
 opt = Options(space_order=16)
 
 # Setup operators
-F = judiModeling(info, model, srcGeometry, recGeometry; options=opt)
-F0 = judiModeling(info, model0, srcGeometry, recGeometry; options=opt)
+F = judiModeling(model, srcGeometry, recGeometry; options=opt)
+F0 = judiModeling(model0, srcGeometry, recGeometry; options=opt)
 J = judiJacobian(F0, q)
 
 # data
@@ -63,7 +60,6 @@ J = judiJacobian(F0, q)
 dobs = F*q
 d0 = F0*q
 residual = d0 - dobs
-δd = J*dm
 
 # gradient
 g = J'*residual
@@ -80,25 +76,25 @@ function fourierJ(F0, q, ps)
     return J
 end
 
-ge = Array{Any}(undef, 3, 8)
+ge = Array{Any}(undef, 4, 8)
 
-for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
+for (p, mode) in enumerate([:Fourier, :QR, :Rademacher, :hutchpp])
     for ps=1:8
         Jp = mode == :Fourier ? fourierJ(F0, q, 2^ps) : judiJacobian(F0, q, 2^ps, dobs; mode=mode)
         ge[p, ps] = Jp'*residual
     end
 end
 
-for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
+for (p, mode) in enumerate([:Fourier, :QR, :Rademacher, :hutchpp])
     clip = maximum(g)/10
 
     figure(figsize=(15, 10))
     subplot(331)
-    imshow(g', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
+    plot_simage(g'; cmap="seismic", new_fig=false)
     title("Reference")
     for ps=1:8
         subplot(3,3,ps+1)
-        imshow(ge[p, ps]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
+        plot_simage(ge[p, ps]'; cmap="seismic", new_fig=false)
         title("$(mode) r=$(2^ps)")
     end
     tight_layout()
@@ -108,13 +104,14 @@ for (p, mode) in enumerate([:Fourier, :QR, :Rademacher])
 
     figure(figsize=(15, 10))
     subplot(331)
-    imshow(g', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
+    plot_simage(g'; cmap="seismic", new_fig=false)
     title("Reference")
     for ps=1:8
         subplot(3,3,ps+1)
-        imshow(g' - ge[p, ps]', cmap="seismic", vmin=-clip, vmax=clip, aspect="auto")
+        plot_simage(g' - ge[p, ps]'; cmap="seismic", new_fig=false)
         title("$(mode) Difference r=$(2^ps)")
     end
     tight_layout()
     savefig(plotsdir("geo-pros-paper/", "Error-$(mode).pdf"), bbox_inches=:tight, dpi=150)
 end
+

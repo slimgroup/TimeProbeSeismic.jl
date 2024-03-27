@@ -34,6 +34,7 @@ function __init__()
     copy!(si, pyimport("sensitivity"))
     copy!(ut, pyimport("utils"))
     copy!(np, pyimport("numpy"))
+    set!(dv."configuration", "autopadding", false)
 end
 
 # Propagators
