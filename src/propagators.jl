@@ -1,3 +1,16 @@
+p_dims = Dict()
+
+# Basic caching of probing dim
+function pdim(ne::Integer)
+    if ne in keys(p_dims)
+        p_e = p_dims[ne]
+    else
+        p_e = dv.CustomDimension(name="p_e", 0, ne-1, ne)
+        p_dims[ne] = p_e
+    end
+    return p_e
+end
+
 # Forward propagation
 function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Float32},
                  wavelet::Array{Float32}, e::Array{Float32}, space_order::Integer=8, isic::Bool=false)
@@ -95,18 +108,18 @@ end
 
 function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=nothing)
     ne = size(e, 2)
-    p_e = dv.DefaultDimension(name="p_e", default_value=ne)
+    p_e = pdim(ne)
     # sub_time
     t_sub = wf.grid.time_dim
     s = fw ? t_sub.spacing : 1
     # Probing vector
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf.grid, dimensions=(t_sub, p_e),
-                        shape=(nt, ne), time_order=0, initializer=e)
+                        shape=(nt, ne), time_order=0, initializer=e, space_order=0)
     # Probed output
     if isnothing(pe)
-        pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(wf.grid.dimensions..., p_e),
-                        shape=(wf.grid.shape..., ne), space_order=wf.space_order)
+        pe = dv.Function(name="$(wf.name)e", grid=wf.grid, dimensions=(p_e, wf.grid.dimensions...),
+                        shape=(ne, wf.grid.shape...), space_order=wf.space_order)
     end
     probing = [dv.Eq(pe, pe + s*q*ic(wf, fw, isic))]
     return pe, probing
@@ -115,18 +128,18 @@ end
 
 function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}; fw=true, isic=false, pe=nothing)
     ne = size(e, 2)
-    p_e = dv.DefaultDimension(name="p_e", default_value=ne)
+    p_e = pdim(ne)
     # sub_time
     t_sub = wf[1].grid.time_dim
     s = fw ? t_sub.spacing : 1
     # Probing vector
     nt = size(e, 1)
     q = dv.TimeFunction(name="Q", grid=wf[1].grid, dimensions=(t_sub, p_e),
-                        shape=(nt, ne), time_order=0, initializer=e)
+                        shape=(nt, ne), time_order=0, initializer=e, space_order=0)
     # Probed output
     if isnothing(pe)
-        pe = dv.Function(name="$(wf[1].name)e", grid=wf[1].grid, dimensions=(wf[1].grid.dimensions..., p_e),
-                            shape=(wf[1].grid.shape..., ne), space_order=wf[1].space_order)
+        pe = dv.Function(name="$(wf[1].name)e", grid=wf[1].grid, dimensions=(p_e, wf[1].grid.dimensions...),
+                            shape=(ne, wf[1].grid.shape...), space_order=wf[1].space_order)
     end
     probing = [dv.Eq(pe, pe + s*q*ic(wf, fw, isic))]
     return pe, probing
@@ -146,7 +159,6 @@ end
 function combine(eu::PyObject, ev::PyObject, offsets::Number, isic::Bool=false)
     @assert offsets == 0
     g = dv.Function(name="ge", grid=eu.grid, space_order=0)
-    ev = ev._subs(ev.indices[end], eu.indices[end])
     eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
     op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
     op()
@@ -165,7 +177,6 @@ function combine(eu::PyObject, ev::PyObject, offsets::Vector{Int64}, isic::Bool=
     # IC with space shifts
     g = dv.Function(name="ge", grid=eu.grid, shape=(2*nh+1, eu.grid.shape...),
                     dimensions=(offs, eu.grid.dimensions...), space_order=0)
-    ev = ev._subs(ev.indices[end], eu.indices[end])
     x = eu.grid.dimensions[1]
 
     ev = ev._subs(x, x+oh)

@@ -1,5 +1,3 @@
-time_resample(q::judiVector, dt) = begin @assert q.nsrc == 1 ;time_resample(make_input(q), q.geometry.dt[1], dt) end
-
 #########################
 struct judiJacobianP{D, O, FT} <: judiAbstractJacobian{D, O, FT}
     m::AbstractSize
@@ -7,15 +5,17 @@ struct judiJacobianP{D, O, FT} <: judiAbstractJacobian{D, O, FT}
     F::FT
     q::judiMultiSourceVector
     r::Integer
-    mode::Symbol
+    probing_mode::Symbol
     dobs::judiVector
     offsets::Union{D, Vector{D}}
 end
 
+_accepted_modes = (:QR, :Rademacher, :Gaussian, :hutchpp)
+
 # Jacobian with probing
 function judiJacobian(F::judiComposedPropagator{D, O}, q::judiMultiSourceVector, r::Integer, dobs::judiMultiSourceVector;
                       options=nothing, mode=:QR, offsets=0f0) where {D, O}
-    mode ∈ [:QR, :Rademacher, :Gaussian] || throw(ArgumentError("Probing vector mode unrecognized, must be `:QR` or `:Rademacher`"))
+    mode ∈ _accepted_modes || throw(ArgumentError("Probing vector mode unrecognized, must be in $(_accepted_modes)"))
     update!(F.F.options, options)
     return judiJacobianP{D, :born, typeof(F)}(F.m, space(F.model.n), F, q, r, mode, dobs, asvec(offsets))
 end
@@ -23,8 +23,8 @@ end
 asvec(x::T) where T<:Number = x
 asvec(x) = collect(x)
 
-adjoint(J::judiJacobianP{D, O, FT}) where {D, O, FT} = judiJacobianP{D, adjoint(O), FT}(J.n, J.m, J.F, J.q, J.r, J.mode, J.dobs, J.offsets)
-getindex(J::judiJacobianP{D, O, FT}, i) where {D, O, FT} = judiJacobianP{D, O, FT}(J.m[i], J.n[i], J.F[i], J.q[i], J.r, J.mode, J.dobs[i], J.offsets)
+adjoint(J::judiJacobianP{D, O, FT}) where {D, O, FT} = judiJacobianP{D, adjoint(O), FT}(J.n, J.m, J.F, J.q, J.r, J.probing_mode, J.dobs, J.offsets)
+getindex(J::judiJacobianP{D, O, FT}, i) where {D, O, FT} = judiJacobianP{D, O, FT}(J.m[i], J.n[i], J.F[i], J.q[i], J.r, J.probing_mode, J.dobs[i], J.offsets)
 
 process_input_data(::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number, FT} = q
 
@@ -56,7 +56,7 @@ function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArr
 
     model_loc = get_model(J.q.geometry, residual.geometry, J.model, J.options)
     modelPy = devito_model(model_loc, J.options)
-    _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy, mode=J.mode)
+    _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy, mode=J.probing_mode)
     ge = backprop(model_loc, residual, Q, eu; options=J.options, modelPy=modelPy, offsets=J.offsets)
     J.options.limit_m && (ge = extend_gradient(J.model, model_loc, ge))
 
@@ -72,12 +72,15 @@ function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArr
 end
 
 fwi_objective(model::MTypes, q::Dtypes, dobs::Dtypes, r::Integer; options=Options(), offsets=0f0) =
-    fwi_objective(model, q, dobs; options=options, r=r, offsets=offsets)
+    fwi_objective(model, q, dobs; options=options, r=r, offsets=offsets, func=multi_src_fg_r)
 
 lsrtm_objective(model::MTypes, q::Dtypes, dobs::Dtypes, dm::dmType, r::Integer; options=Options(), nlind=false, offsets=0f0) =
-    lsrtm_objective(model, q, dobs, dm; options=options, nlind=nlind, r=r, offsets=offsets)
+    lsrtm_objective(model, q, dobs, dm; options=options, nlind=nlind, r=r, offsets=offsets, func=multi_src_fg_r)
 
-function multi_src_fg(model::AbstractModel, q::judiVector, dobs::judiVector, dm, options::JUDIOptions, nlind::Bool, lin::Bool, r::Integer, offsets)
+
+function multi_src_fg_r(model::AbstractModel, q::judiVector, dobs::judiVector, dm, options::JUDIOptions;
+                      nlind::Bool=false, lin::Bool=false, misfit::Function=mse, illum::Bool=false, r::Integer=32,
+                      data_precon=nothing, model_precon=LinearAlgebra.I)
     q.geometry = Geometry(q.geometry)
     dobs.geometry = Geometry(dobs.geometry)
 

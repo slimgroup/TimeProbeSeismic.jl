@@ -1,8 +1,8 @@
 
 function forward(model::AbstractModel, q::judiVector, dobs::judiVector; options=Options(), ps=16, modelPy=nothing, mode=:QR)
-    dt_Comp = get_dt(model)
     # Python model
     isnothing(modelPy) && (modelPy = devito_model(model, options))
+    dt_Comp = convert(Float32, modelPy."critical_dt")
     # Interpolate input data to computational grid
     q_data = time_resample(make_input(q), q.geometry, dt_Comp)
     d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
@@ -21,9 +21,9 @@ function forward(model::AbstractModel, q::judiVector, dobs::judiVector; options=
 end
 
 function born(model::AbstractModel, q::judiVector, dobs::judiVector, dm; options=Options(), ps=16, modelPy=nothing)
-    dt_Comp = get_dt(model)
     # Python model
     isnothing(modelPy) && (modelPy = devito_model(model, options; dm=dm))
+    dt_Comp = convert(Float32, modelPy."critical_dt")
 
     # Interpolate input data to computational grid
     q_data = time_resample(make_input(q), q.geometry, dt_Comp)
@@ -46,9 +46,10 @@ end
 
 function backprop(model::AbstractModel, residual::judiVector, Q::Array{Float32}, eu::PyObject;
                  options=Options(), ps=16, modelPy=nothin, offsets=0f0, pe=nothing)
-    dt_Comp = get_dt(model)
     # Python mode
     isnothing(modelPy) && (modelPy = devito_model(model, options))
+    dt_Comp = convert(Float32, modelPy."critical_dt")
+
     # Interpolate input data to computational grid
     d_data = time_resample(make_input(residual), residual.geometry, dt_Comp)
 
