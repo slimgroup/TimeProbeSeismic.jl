@@ -57,3 +57,21 @@ end
 datadir(s::Vararg{String, N}) where N = join([TPSPath,"/../data/", s...])
 plotsdir(s::Vararg{String, N}) where N = join([TPSPath,"/../plots/", s...])
 wsave(s, fig; dpi::Int=150, kw...) = fig.savefig(s, bbox_inches="tight", dpi=dpi, kw...)
+
+
+function get_dt_data(dobs, q, dt_Comp)
+    # Interpolate input data to computational grid
+    q_data = time_resample(make_input(q), q.geometry, dt_Comp)
+    d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
+    if size(d_data, 1) != size(q_data, 1)
+        dsize = size(q_data, 1) - size(d_data, 1)
+        dt0 = t0(dobs.geometry, 1) - t0(q.geometry, 1)
+        @assert dt0 != 0 && sign(dsize) == sign(dt0)
+        if dt0 > 0
+            d_data = vcat(zeros(Float32, dsize, size(d_data, 2)), d_data)
+        else
+            q_data = vcat(zeros(Float32, -dsize,  size(q_data, 2)), q_data)
+        end
+    end
+    return d_data, q_data
+end   

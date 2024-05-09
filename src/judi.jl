@@ -56,8 +56,8 @@ function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArr
 
     model_loc = get_model(J.q.geometry, residual.geometry, J.model, J.options)
     modelPy = devito_model(model_loc, J.options)
-    _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy, mode=J.probing_mode)
-    ge = backprop(model_loc, residual, Q, eu; options=J.options, modelPy=modelPy, offsets=J.offsets)
+    _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy, mode=J.mode)
+    ge = backprop(model_loc, J.q, residual, Q, eu; options=J.options, modelPy=modelPy, offsets=J.offsets)
     J.options.limit_m && (ge = extend_gradient(J.model, model_loc, ge))
 
     if isa(J.offsets, Number)
@@ -92,7 +92,7 @@ function multi_src_fg_r(model::AbstractModel, q::judiVector, dobs::judiVector, d
         dl, Q, eu = forward(model_loc, q, dobs; ps=r, options=options, modelPy=modelPy)
     end
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
-    ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy, offsets=offsets, pe=eu.indices[1])
+    ge = backprop(model_loc, q, residual, Q, eu; options=options, modelPy=modelPy, offsets=offsets)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
     return Ref{Float32}(.5f0*norm(residual)^2), PhysicalParameter(ge, model.d, model.o)
 end
