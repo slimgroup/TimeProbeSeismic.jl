@@ -35,10 +35,10 @@ simil(x, y) = dot(x, y)/(norm(x)*norm(y))
 # Model smoother
 function smooth(m::AbstractModel; sigma=3)
     nm = deepcopy(m)
-    inds = [1:ni for ni ∈ m.n]
-    @inbounds for i ∈ CartesianIndices(tuple(inds...))
+    inds = [1:ni for ni ∈ size(m)]
+    for i ∈ CartesianIndices(tuple(inds...))
         s = CartesianIndex(max.(1, Tuple(i) .- sigma))
-        e = CartesianIndex(min.(m.n, Tuple(i) .+ sigma))
+        e = CartesianIndex(min.(size(m), Tuple(i) .+ sigma))
         nm.m.data[i] = mean(m.m.data[s:e])
     end
     return nm

@@ -2,6 +2,7 @@
 function forward(model::AbstractModel, q::judiVector, dobs::judiVector; options=Options(), ps=16, modelPy=nothing, mode=:QR)
     # Python model
     isnothing(modelPy) && (modelPy = devito_model(model, options))
+    dt_Comp = convert(Float32, modelPy."critical_dt")
 
     d_data, q_data  = get_dt_data(dobs, q, dt_Comp)
 
@@ -43,7 +44,6 @@ end
 
 function backprop(model::AbstractModel, q::judiVector, residual::judiVector, Q::Array{Float32}, eu::PyObject;
                   options=Options(), ps=16, modelPy=nothin, offsets=0f0, pe=nothing)
-    dt_Comp = get_dt(model)
     # Python mode
     isnothing(modelPy) && (modelPy = devito_model(model, options))
     dt_Comp = convert(Float32, modelPy."critical_dt")
@@ -54,8 +54,8 @@ function backprop(model::AbstractModel, q::judiVector, residual::judiVector, Q::
     # Set up coordinates with devito dimensions
     rec_coords = setup_grid(residual.geometry[1], modelPy.shape)
 
-    ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order; pe=pe, d_probe=eu.dimensions[end])
-    inds = Int64.(offsets ./ model.d[1])
+    ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order; pe=pe, d_probe=eu.dimensions[1])
+    inds = Int64.(offsets ./ spacing(model, 1))
     g = combine(eu, ev, inds, options.IC == "isic")
     return remove_padding(g.data, modelPy.padsizes, offsets; true_adjoint=options.sum_padding)
 end

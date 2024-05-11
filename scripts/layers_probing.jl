@@ -19,7 +19,7 @@ dm = model0.m - model.m
 # Simple geometry
 # Src/rec sampling and recording time
 timeD = 1000f0   # receiver recording time [ms]
-dtD = get_dt(model0)    # receiver sampling interval [ms]
+dtD = 2f0    # receiver sampling interval [ms]
 nsrc = 1
 
 nxrec = n[1]
@@ -42,7 +42,7 @@ wavelet = ricker_wavelet(timeD, dtD, f0)
 q = judiVector(srcGeometry, wavelet)
 
 # Forward operator
-opt = Options(space_order=16, sum_padding=true)
+opt = Options(space_order=16, sum_padding=true, dt_comp=dtD)
 F = judiModeling(model, srcGeometry, recGeometry; options=opt)
 F0 = judiModeling(model0, srcGeometry, recGeometry; options=opt)
 J = judiJacobian(F0, q)

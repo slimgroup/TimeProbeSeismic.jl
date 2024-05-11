@@ -17,7 +17,7 @@ function judiJacobian(F::judiComposedPropagator{D, O}, q::judiMultiSourceVector,
                       options=nothing, mode=:QR, offsets=0f0) where {D, O}
     mode ∈ _accepted_modes || throw(ArgumentError("Probing vector mode unrecognized, must be in $(_accepted_modes)"))
     update!(F.F.options, options)
-    return judiJacobianP{D, :born, typeof(F)}(F.m, space(F.model.n), F, q, r, mode, dobs, asvec(offsets))
+    return judiJacobianP{D, :born, typeof(F)}(F.m, space(size(F.model)), F, q, r, mode, dobs, asvec(offsets))
 end
 
 asvec(x::T) where T<:Number = x
@@ -30,7 +30,7 @@ process_input_data(::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number
 
 function make_input(J::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number, FT}
     srcGeom, srcData = make_src(J.q, J.F.qInjection)
-    return srcGeom, srcData, J.F.rInterpolation.data[1], nothing, reshape(q, J.model.n)
+    return srcGeom, srcData, J.F.rInterpolation.data[1], nothing, reshape(q, size(J.model))
 end
 
 function multi_src_propagate(F::judiJacobianP{D, O, FT}, q::AbstractArray{D}) where {D<:Number, FT, O}
@@ -56,16 +56,16 @@ function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArr
 
     model_loc = get_model(J.q.geometry, residual.geometry, J.model, J.options)
     modelPy = devito_model(model_loc, J.options)
-    _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy, mode=J.mode)
+    _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy, mode=J.probing_mode)
     ge = backprop(model_loc, J.q, residual, Q, eu; options=J.options, modelPy=modelPy, offsets=J.offsets)
     J.options.limit_m && (ge = extend_gradient(J.model, model_loc, ge))
 
     if isa(J.offsets, Number)
-        g = PhysicalParameter(ge, J.model.d, J.model.o)
+        g = PhysicalParameter(ge, spacing(J.model), origin(J.model))
     else
-        ncig = (size(ge, 1), model_loc.n...)
-        o = (minimum(J.offsets), model_loc.o...)
-        d = (abs(diff(J.offsets)[1]), model_loc.d...)
+        ncig = (size(ge, 1), size(model_loc)...)
+        o = (minimum(J.offsets), origin(model_loc)...)
+        d = (abs(diff(J.offsets)[1]), spacing(model_loc)...)
         g = PhysicalParameter(ncig, d, o, ge)
     end
     return g
@@ -94,5 +94,5 @@ function multi_src_fg_r(model::AbstractModel, q::judiVector, dobs::judiVector, d
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
     ge = backprop(model_loc, q, residual, Q, eu; options=options, modelPy=modelPy, offsets=offsets)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
-    return Ref{Float32}(.5f0*norm(residual)^2), PhysicalParameter(ge, model.d, model.o)
+    return Ref{Float32}(.5f0*norm(residual)^2), PhysicalParameter(ge, spacing(model), origin(model))
 end
