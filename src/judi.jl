@@ -34,6 +34,9 @@ function make_input(J::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Numb
 end
 
 function multi_src_propagate(F::judiJacobianP{D, O, FT}, q::AbstractArray{D}) where {D<:Number, FT, O}
+    GC.gc(true)
+    dv.clear_cache()
+
     q = process_input_data(F, q)
     # Number of sources and init result
     nsrc = get_nsrc(F, q)
@@ -50,6 +53,9 @@ function multi_src_propagate(F::judiJacobianP{D, O, FT}, q::AbstractArray{D}) wh
 end
 
 function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArray{T}) where {T, D, FT}
+    GC.gc(true)
+    dv.clear_cache()
+
     J.q.geometry = Geometry(J.q.geometry)
     residual.geometry = Geometry(residual.geometry)
     J.dobs.geometry = Geometry(J.dobs.geometry)
@@ -81,6 +87,9 @@ lsrtm_objective(model::MTypes, q::Dtypes, dobs::Dtypes, dm::dmType, r::Integer; 
 function multi_src_fg_r(model::AbstractModel, q::judiVector, dobs::judiVector, dm, options::JUDIOptions;
                       nlind::Bool=false, lin::Bool=false, misfit::Function=mse, illum::Bool=false, r::Integer=32,
                       data_precon=nothing, model_precon=LinearAlgebra.I)
+    GC.gc(true)
+    dv.clear_cache()
+
     q.geometry = Geometry(q.geometry)
     dobs.geometry = Geometry(dobs.geometry)
 
