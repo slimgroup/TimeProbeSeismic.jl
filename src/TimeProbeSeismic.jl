@@ -18,6 +18,7 @@ TPSPath = dirname(pathof(TimeProbeSeismic))
 
 # python imports
 const dv = PyNULL()
+const dvp = PyNULL()
 const wf = PyNULL()
 const ker = PyNULL()
 const geom = PyNULL()
@@ -35,6 +36,11 @@ function __init__()
     copy!(ut, pyimport("utils"))
     copy!(np, pyimport("numpy"))
     set!(dv."configuration", "autopadding", false)
+    try
+        copy!(dvp, pyimport("devitopro"))
+    catch
+        copy!(dvp, pyimport("devito"))
+    end
 end
 
 # Propagators

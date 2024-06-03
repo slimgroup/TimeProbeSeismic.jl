@@ -35,10 +35,10 @@ simil(x, y) = dot(x, y)/(norm(x)*norm(y))
 # Model smoother
 function smooth(m::AbstractModel; sigma=3)
     nm = deepcopy(m)
-    inds = [1:ni for ni ∈ m.n]
-    @inbounds for i ∈ CartesianIndices(tuple(inds...))
+    inds = [1:ni for ni ∈ size(m)]
+    for i ∈ CartesianIndices(tuple(inds...))
         s = CartesianIndex(max.(1, Tuple(i) .- sigma))
-        e = CartesianIndex(min.(m.n, Tuple(i) .+ sigma))
+        e = CartesianIndex(min.(size(m), Tuple(i) .+ sigma))
         nm.m.data[i] = mean(m.m.data[s:e])
     end
     return nm
@@ -57,3 +57,21 @@ end
 datadir(s::Vararg{String, N}) where N = join([TPSPath,"/../data/", s...])
 plotsdir(s::Vararg{String, N}) where N = join([TPSPath,"/../plots/", s...])
 wsave(s, fig; dpi::Int=150, kw...) = fig.savefig(s, bbox_inches="tight", dpi=dpi, kw...)
+
+
+function get_dt_data(dobs, q, dt_Comp)
+    # Interpolate input data to computational grid
+    q_data = time_resample(make_input(q), q.geometry, dt_Comp)
+    d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
+    if size(d_data, 1) != size(q_data, 1)
+        dsize = size(q_data, 1) - size(d_data, 1)
+        dt0 = t0(dobs.geometry, 1) - t0(q.geometry, 1)
+        @assert dt0 != 0 && sign(dsize) == sign(dt0)
+        if dt0 > 0
+            d_data = vcat(zeros(Float32, dsize, size(d_data, 2)), d_data)
+        else
+            q_data = vcat(zeros(Float32, -dsize,  size(q_data, 2)), q_data)
+        end
+    end
+    return d_data, q_data
+end   

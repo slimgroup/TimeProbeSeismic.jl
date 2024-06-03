@@ -3,9 +3,8 @@ function forward(model::AbstractModel, q::judiVector, dobs::judiVector; options=
     # Python model
     isnothing(modelPy) && (modelPy = devito_model(model, options))
     dt_Comp = convert(Float32, modelPy."critical_dt")
-    # Interpolate input data to computational grid
-    q_data = time_resample(make_input(q), q.geometry, dt_Comp)
-    d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
+
+    d_data, q_data  = get_dt_data(dobs, q, dt_Comp)
 
     # Set up coordinates with devito dimensions
     src_coords = setup_grid(q.geometry[1], modelPy.shape)
@@ -26,8 +25,7 @@ function born(model::AbstractModel, q::judiVector, dobs::judiVector, dm; options
     dt_Comp = convert(Float32, modelPy."critical_dt")
 
     # Interpolate input data to computational grid
-    q_data = time_resample(make_input(q), q.geometry, dt_Comp)
-    d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
+    d_data, q_data = get_dt_data(dobs, q, dt_Comp)
 
     # Set up coordinates with devito dimensions
     src_coords = setup_grid(q.geometry[1], modelPy.shape)
@@ -44,20 +42,20 @@ function born(model::AbstractModel, q::judiVector, dobs::judiVector, dm; options
 end
 
 
-function backprop(model::AbstractModel, residual::judiVector, Q::Array{Float32}, eu::PyObject;
-                 options=Options(), ps=16, modelPy=nothin, offsets=0f0, pe=nothing)
+function backprop(model::AbstractModel, q::judiVector, residual::judiVector, Q::Array{Float32}, eu::PyObject;
+                  options=Options(), ps=16, modelPy=nothin, offsets=0f0, pe=nothing)
     # Python mode
     isnothing(modelPy) && (modelPy = devito_model(model, options))
     dt_Comp = convert(Float32, modelPy."critical_dt")
 
     # Interpolate input data to computational grid
-    d_data = time_resample(make_input(residual), residual.geometry, dt_Comp)
+    d_data, _ = get_dt_data(residual, q, dt_Comp)
 
     # Set up coordinates with devito dimensions
     rec_coords = setup_grid(residual.geometry[1], modelPy.shape)
 
-    ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order; pe=pe)
-    inds = Int64.(offsets ./ model.d[1])
+    ev, _ = backprop(modelPy, d_data, rec_coords, Q, options.space_order; pe=pe, d_probe=eu.dimensions[1])
+    inds = Int64.(offsets ./ spacing(model, 1))
     g = combine(eu, ev, inds, options.IC == "isic")
     return remove_padding(g.data, modelPy.padsizes, offsets; true_adjoint=options.sum_padding)
 end

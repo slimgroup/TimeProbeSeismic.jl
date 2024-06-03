@@ -17,7 +17,7 @@ function judiJacobian(F::judiComposedPropagator{D, O}, q::judiMultiSourceVector,
                       options=nothing, mode=:QR, offsets=0f0) where {D, O}
     mode ∈ _accepted_modes || throw(ArgumentError("Probing vector mode unrecognized, must be in $(_accepted_modes)"))
     update!(F.F.options, options)
-    return judiJacobianP{D, :born, typeof(F)}(F.m, space(F.model.n), F, q, r, mode, dobs, asvec(offsets))
+    return judiJacobianP{D, :born, typeof(F)}(F.m, space(size(F.model)), F, q, r, mode, dobs, asvec(offsets))
 end
 
 asvec(x::T) where T<:Number = x
@@ -30,10 +30,13 @@ process_input_data(::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number
 
 function make_input(J::judiJacobianP{D, :born, FT}, q::dmType{D}) where {D<:Number, FT}
     srcGeom, srcData = make_src(J.q, J.F.qInjection)
-    return srcGeom, srcData, J.F.rInterpolation.data[1], nothing, reshape(q, J.model.n)
+    return srcGeom, srcData, J.F.rInterpolation.data[1], nothing, reshape(q, size(J.model))
 end
 
 function multi_src_propagate(F::judiJacobianP{D, O, FT}, q::AbstractArray{D}) where {D<:Number, FT, O}
+    GC.gc(true)
+    dv.clear_cache()
+
     q = process_input_data(F, q)
     # Number of sources and init result
     nsrc = get_nsrc(F, q)
@@ -50,6 +53,9 @@ function multi_src_propagate(F::judiJacobianP{D, O, FT}, q::AbstractArray{D}) wh
 end
 
 function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArray{T}) where {T, D, FT}
+    GC.gc(true)
+    dv.clear_cache()
+
     J.q.geometry = Geometry(J.q.geometry)
     residual.geometry = Geometry(residual.geometry)
     J.dobs.geometry = Geometry(J.dobs.geometry)
@@ -57,15 +63,15 @@ function propagate(J::judiJacobianP{D, :adjoint_born, FT}, residual::AbstractArr
     model_loc = get_model(J.q.geometry, residual.geometry, J.model, J.options)
     modelPy = devito_model(model_loc, J.options)
     _, Q, eu = forward(model_loc, J.q, J.dobs; ps=J.r, options=J.options, modelPy=modelPy, mode=J.probing_mode)
-    ge = backprop(model_loc, residual, Q, eu; options=J.options, modelPy=modelPy, offsets=J.offsets)
+    ge = backprop(model_loc, J.q, residual, Q, eu; options=J.options, modelPy=modelPy, offsets=J.offsets)
     J.options.limit_m && (ge = extend_gradient(J.model, model_loc, ge))
 
     if isa(J.offsets, Number)
-        g = PhysicalParameter(ge, J.model.d, J.model.o)
+        g = PhysicalParameter(ge, spacing(J.model), origin(J.model))
     else
-        ncig = (size(ge, 1), model_loc.n...)
-        o = (minimum(J.offsets), model_loc.o...)
-        d = (abs(diff(J.offsets)[1]), model_loc.d...)
+        ncig = (size(ge, 1), size(model_loc)...)
+        o = (minimum(J.offsets), origin(model_loc)...)
+        d = (abs(diff(J.offsets)[1]), spacing(model_loc)...)
         g = PhysicalParameter(ncig, d, o, ge)
     end
     return g
@@ -81,6 +87,9 @@ lsrtm_objective(model::MTypes, q::Dtypes, dobs::Dtypes, dm::dmType, r::Integer; 
 function multi_src_fg_r(model::AbstractModel, q::judiVector, dobs::judiVector, dm, options::JUDIOptions;
                       nlind::Bool=false, lin::Bool=false, misfit::Function=mse, illum::Bool=false, r::Integer=32,
                       data_precon=nothing, model_precon=LinearAlgebra.I)
+    GC.gc(true)
+    dv.clear_cache()
+
     q.geometry = Geometry(q.geometry)
     dobs.geometry = Geometry(dobs.geometry)
 
@@ -92,7 +101,7 @@ function multi_src_fg_r(model::AbstractModel, q::judiVector, dobs::judiVector, d
         dl, Q, eu = forward(model_loc, q, dobs; ps=r, options=options, modelPy=modelPy)
     end
     residual = nlind ? dl - (dobs - dnl) : dl - dobs
-    ge = backprop(model_loc, residual, Q, eu; options=options, modelPy=modelPy, offsets=offsets, pe=eu.indices[1])
+    ge = backprop(model_loc, q, residual, Q, eu; options=options, modelPy=modelPy, offsets=offsets)
     options.limit_m && (ge = extend_gradient(model, model_loc, ge))
-    return Ref{Float32}(.5f0*norm(residual)^2), PhysicalParameter(ge, model.d, model.o)
+    return Ref{Float32}(.5f0*norm(residual)^2), PhysicalParameter(ge, spacing(model), origin(model))
 end

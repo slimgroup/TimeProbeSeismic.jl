@@ -32,8 +32,7 @@ function forward(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)",
-                     opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="forwardp$(r)")
 
     kw = Dict(Symbol(rcv.name) => rcv)
     summary = op(dt=model."critical_dt"; kw...)
@@ -44,7 +43,7 @@ end
 
 
 function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32},
-                  e::Array{Float32}, space_order::Integer=8; pe=nothing)
+                  e::Array{Float32}, space_order::Integer=8; pe=nothing, d_probe=nothing)
     # Number of time steps
     nt = size(y, 1)
     r = size(e, 2)
@@ -54,14 +53,14 @@ function backprop(model::PyObject, y::Array{Float32}, rcv_coords::Array{Float32}
 
     # Set up PDE expression and rearrange
     pde = ker.wave_kernel(model, v, fw=false)
-    ev, probe_eq = time_probe(e, v; fw=false, pe=pe)
+    ev, probe_eq = time_probe(e, v; fw=false, pe=pe, d_probe=d_probe)
 
     # Setup source and receiver
     geom_expr = geom.geom_expr(model, v, src_coords=rcv_coords, nt=nt, wavelet=y, fw=false)
 
     # Create operator and run
     subs = model.spacing_map
-    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="adjointp$(r)", opt=ut.opt_op(model))
+    op = dv.Operator(vcat(pde, geom_expr, probe_eq), subs=subs, name="adjointp$(r)")
 
     # Run operator
     summary = op(dt=model."critical_dt")
@@ -96,7 +95,7 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
     # Create operator and run
     subs = model.spacing_map
     op = dv.Operator(vcat(pde, pdel, probe_eq, geom_expr, geom_exprl), subs=subs,
-                     name="bornp$(r)", opt=ut.opt_op(model))
+                     name="bornp$(r)")
 
     kw = Dict(Symbol(rcv.name) => rcv, Symbol(rcvl.name) => rcvl)
     summary = op(dt=model."critical_dt"; kw...)
@@ -106,9 +105,9 @@ function born(model::PyObject, src_coords::Array{Float32}, rcv_coords::Array{Flo
 end
 
 
-function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=nothing)
+function time_probe(e::Array{Float32, 2}, wf::PyObject; fw=true, isic=false, pe=nothing, d_probe=nothing)
     ne = size(e, 2)
-    p_e = pdim(ne)
+    p_e = isnothing(d_probe) ? dv.DefaultDimension(name="p_e", default_value=ne) : d_probe
     # sub_time
     t_sub = wf.grid.time_dim
     s = fw ? t_sub.spacing : 1
@@ -128,7 +127,7 @@ end
 
 function time_probe(e::Array{Float32, 2}, wf::Tuple{PyCall.PyObject, PyCall.PyObject}; fw=true, isic=false, pe=nothing)
     ne = size(e, 2)
-    p_e = pdim(ne)
+    p_e = isnothing(d_probe) ? dv.DefaultDimension(name="p_e", default_value=ne) : d_probe
     # sub_time
     t_sub = wf[1].grid.time_dim
     s = fw ? t_sub.spacing : 1
@@ -182,7 +181,7 @@ function combine(eu::PyObject, ev::PyObject, offsets::Vector{Int64}, isic::Bool=
     ev = ev._subs(x, x+oh)
     eu = eu._subs(x, x-oh)
     eq = isic ? (eu * ev.laplace + si.inner_grad(eu, ev)) : eu * ev
-    
+
     op = dv.Operator(dv.Inc(g, -eq), subs=eu.grid.spacing_map)
     xs = maximum(abs.(offsets))
     xe = eu.grid.shape[1] - xs
