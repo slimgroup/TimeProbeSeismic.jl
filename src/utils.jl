@@ -65,7 +65,7 @@ function get_dt_data(dobs, q, dt_Comp)
     d_data = time_resample(make_input(dobs), dobs.geometry, dt_Comp)
     if size(d_data, 1) != size(q_data, 1)
         dsize = size(q_data, 1) - size(d_data, 1)
-        dt0 = t0(dobs.geometry, 1) - t0(q.geometry, 1)
+        dt0 = get_t0(dobs.geometry, 1) - get_t0(q.geometry, 1)
         @assert dt0 != 0 && sign(dsize) == sign(dt0)
         if dt0 > 0
             d_data = vcat(zeros(Float32, dsize, size(d_data, 2)), d_data)
