@@ -1,7 +1,7 @@
 name = "TimeProbeSeismic"
 uuid = "cd417b76-fc6b-4228-be91-94f5ea77264b"
 authors = ["Mathias Louboutin", "Felix J. Herrmann"]
-version = "1.1.4"
+version = "1.1.5"
 
 [deps]
 JUDI = "f3b833dc-6b2e-5b9c-b940-873ed6319979"
@@ -11,6 +11,6 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
-JUDI = "3.4.3"
+JUDI = "3.4.4"
 Reexport = "1"
 julia = "1.6"
